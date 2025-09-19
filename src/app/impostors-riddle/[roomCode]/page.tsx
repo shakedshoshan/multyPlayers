@@ -29,7 +29,6 @@ function ImpostorRiddleView() {
     switch (game.gameState) {
       case 'lobby':
         return <Lobby />;
-      case 'discussion':
       case 'voting':
         return <DiscussionScreen />;
       case 'reveal':

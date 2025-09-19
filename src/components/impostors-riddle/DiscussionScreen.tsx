@@ -44,7 +44,7 @@ export function DiscussionScreen() {
                 <Info className="h-4 w-4" />
                 <AlertTitle>You are the Impostor!</AlertTitle>
                 <AlertDescription>
-                    Blend in, ask vague questions, and don't get caught.
+                    Blend in, discuss the category, and don't get caught.
                 </AlertDescription>
             </Alert>
           ) : (
@@ -68,7 +68,7 @@ export function DiscussionScreen() {
                            {player.id !== p.id && (
                              <Button 
                                 onClick={() => handleVote(p.id)}
-                                disabled={playerHasVoted || game.gameState === 'discussion'}
+                                disabled={playerHasVoted}
                                 size="sm"
                              >
                                 {player.votedFor === p.id ? <Check className='h-4 w-4' /> : "Vote"}
@@ -83,8 +83,7 @@ export function DiscussionScreen() {
            </div>
         </CardContent>
         <CardFooter className='flex-col gap-4'>
-            {game.gameState === 'discussion' && <p className="text-muted-foreground">Discussion phase is active. Voting will begin soon.</p>}
-            {game.gameState === 'voting' && !playerHasVoted && <p className="text-primary font-semibold">It's time to vote! Who is the impostor?</p>}
+            {!playerHasVoted && <p className="text-primary font-semibold">Discuss and cast your vote for the impostor!</p>}
             {playerHasVoted && <p className="text-green-500 font-semibold">You have voted! Waiting for other players.</p>}
              <Button variant="ghost" onClick={leaveGame} className="mt-4">
                 <ArrowLeft className="mr-2 h-4 w-4" />

@@ -16,7 +16,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 
 const DISCUSSION_TIME = 600; // 10 minutes
-const VOTING_START_TIME = DISCUSSION_TIME - 60; // Voting starts after 1 minute of discussion
 
 const createPlayer = (id: string, name: string, isHost = false): RiddlePlayer => ({
   id,
@@ -188,7 +187,7 @@ export function ImpostorRiddleProvider({
 
       await update(ref(db, `impostor-riddles/${roomCode}`), {
         ...playerUpdates,
-        gameState: 'discussion',
+        gameState: 'voting',
         category,
         secretWord,
         timer: DISCUSSION_TIME,
@@ -204,7 +203,7 @@ export function ImpostorRiddleProvider({
   }, [game, player, roomCode, toast]);
 
   const castVote = async (votedPlayerId: string) => {
-    if (!game || !player || !['discussion', 'voting'].includes(game.gameState) || player.votedFor) return;
+    if (!game || !player || game.gameState !== 'voting' || player.votedFor) return;
     await update(ref(db, `impostor-riddles/${roomCode}/players/${player.id}`), { votedFor: votedPlayerId });
   };
   
@@ -230,7 +229,7 @@ export function ImpostorRiddleProvider({
 
   // Timer effect (host only)
   useEffect(() => {
-    if (player?.isHost && (game?.gameState === 'discussion' || game?.gameState === 'voting') && game.timer > 0) {
+    if (player?.isHost && game?.gameState === 'voting' && game.timer > 0) {
       const interval = setInterval(async () => {
         const gameRef = ref(db, `impostor-riddles/${roomCode}`);
         const snapshot = await get(gameRef);
@@ -255,13 +254,8 @@ export function ImpostorRiddleProvider({
   useEffect(() => {
     if (!game || !player?.isHost) return;
 
-    // Start voting when discussion timer hits a certain point
-    if (game.gameState === 'discussion' && game.timer <= VOTING_START_TIME) {
-      update(ref(db, `impostor-riddles/${roomCode}`), { gameState: 'voting' });
-    }
-
     // End game when all votes are in
-    if (['discussion', 'voting'].includes(game.gameState)) {
+    if (game.gameState === 'voting') {
       const allVoted = game.players.length > 0 && game.players.every(p => p.votedFor);
       if (allVoted) {
         const votes: Record<string, number> = {};

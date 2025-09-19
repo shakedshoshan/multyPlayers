@@ -34,7 +34,7 @@ export type RiddlePlayer = {
     votedFor: string | null; // Player ID they voted for
 };
 
-export type RiddleGameState = 'lobby' | 'discussion' | 'voting' | 'reveal';
+export type RiddleGameState = 'lobby' | 'voting' | 'reveal';
 
 export type RiddleGame = {
     roomCode: string;
