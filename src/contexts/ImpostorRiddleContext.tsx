@@ -62,9 +62,14 @@ export function ImpostorRiddleProvider({
           previousWords: data.previousWords || [],
         };
         
-        if (player && !players.some((p: RiddlePlayer) => p.id === player.id)) {
-          setPlayer(null);
-          router.push(`/impostors-riddle`);
+        if (player) {
+          const currentPlayerInGame = players.find((p: RiddlePlayer) => p.id === player.id);
+          if (currentPlayerInGame) {
+             setPlayer(currentPlayerInGame); // Update player state with new data from DB
+          } else {
+             setPlayer(null); // Player was removed or left
+             router.push(`/impostors-riddle`);
+          }
         }
         
         setGame(transformedData);
@@ -80,7 +85,7 @@ export function ImpostorRiddleProvider({
     });
 
     return () => unsubscribe();
-  }, [roomCode, router, toast, player]);
+  }, [roomCode, router, toast, player?.id]);
   
   const leaveGame = useCallback(async () => {
     if (!player || !game) return;
