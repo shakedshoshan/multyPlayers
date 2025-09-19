@@ -85,7 +85,7 @@ export function ImpostorRiddleProvider({
     });
 
     return () => unsubscribe();
-  }, [roomCode, router, toast]);
+  }, [roomCode, router, toast, player]);
   
   const leaveGame = useCallback(async () => {
     if (!player || !game) return;
