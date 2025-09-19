@@ -2,11 +2,18 @@
 
 import { useGame } from '@/contexts/GameContext';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, RefreshCw, XCircle, Loader2 } from 'lucide-react';
+import {
+  CheckCircle2,
+  RefreshCw,
+  XCircle,
+  Loader2,
+  ArrowLeft,
+} from 'lucide-react';
 import type { Player } from '@/lib/types';
 import { PlayerAvatar } from './PlayerAvatar';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 function AnswerCard({
   player,
@@ -43,7 +50,10 @@ export function ResultsScreen() {
   const [isStartingNext, setIsStartingNext] = useState(false);
 
   useEffect(() => {
-    if (game?.gameState === 'revealing' && game.players.length > revealed.length) {
+    if (
+      game?.gameState === 'revealing' &&
+      game.players.length > revealed.length
+    ) {
       const revealInterval = setInterval(() => {
         setRevealed((r) => {
           if (r.length < game.players.length) {
@@ -79,13 +89,17 @@ export function ResultsScreen() {
           <div className="flex flex-col items-center gap-2 text-green-400">
             <CheckCircle2 className="h-16 w-16" />
             <h1 className="text-4xl font-extrabold">SUCCESS!</h1>
-            <p className="text-xl text-foreground">You're on the same wavelength!</p>
+            <p className="text-xl text-foreground">
+              You're on the same wavelength!
+            </p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 text-destructive">
             <XCircle className="h-16 w-16" />
             <h1 className="text-4xl font-extrabold">FAILURE!</h1>
-            <p className="text-xl text-foreground">The hive mind is fractured.</p>
+            <p className="text-xl text-foreground">
+              The hive mind is fractured.
+            </p>
           </div>
         )}
         <h2 className="text-2xl md:text-3xl font-bold text-primary mt-4">
@@ -106,20 +120,29 @@ export function ResultsScreen() {
         ))}
       </div>
 
-      {!isRevealing && player.isHost && (
-        <Button
-          size="lg"
-          onClick={handleNextRound}
-          disabled={isStartingNext}
-          className="mt-8 animate-in fade-in slide-in-from-bottom-5 delay-1000 duration-500 fill-mode-both"
-        >
-          {isStartingNext ? (
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-          ) : (
-            <RefreshCw className="mr-2 h-5 w-5" />
+      {!isRevealing && (
+        <div className="mt-8 animate-in fade-in slide-in-from-bottom-5 delay-1000 duration-500 fill-mode-both flex items-center gap-4">
+          {player.isHost && (
+            <Button
+              size="lg"
+              onClick={handleNextRound}
+              disabled={isStartingNext}
+            >
+              {isStartingNext ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-5 w-5" />
+              )}
+              Next Round
+            </Button>
           )}
-          Next Round
-        </Button>
+           <Button variant="ghost" asChild>
+              <Link href="/">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Leave Game
+              </Link>
+            </Button>
+        </div>
       )}
     </div>
   );

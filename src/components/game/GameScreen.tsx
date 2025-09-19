@@ -1,14 +1,15 @@
 'use client';
 
 import { useGame } from '@/contexts/GameContext';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Leaderboard } from './Leaderboard';
 import { FormEvent, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Send, Check } from 'lucide-react';
+import { Send, Check, ArrowLeft } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
+import Link from 'next/link';
 
 const ROUND_TIME = 30;
 
@@ -44,7 +45,7 @@ export function GameScreen() {
 
       <main>
         <Card className="text-center shadow-lg">
-          <CardContent className="p-6 md:p-10">
+          <CardContent className="p-6 md:p-10 pb-4">
             <p className="text-lg text-muted-foreground font-medium">Category</p>
             <h1 className="text-3xl md:text-5xl font-extrabold tracking-tighter mt-2 mb-8 font-headline min-h-[4rem] md:min-h-[6rem] flex items-center justify-center">
               {game.category ? (
@@ -93,6 +94,14 @@ export function GameScreen() {
               )}
             </form>
           </CardContent>
+          <CardFooter className="flex justify-center pb-6">
+            <Button variant="ghost" asChild>
+              <Link href="/">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Leave Game
+              </Link>
+            </Button>
+          </CardFooter>
         </Card>
       </main>
     </div>
