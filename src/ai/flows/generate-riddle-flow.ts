@@ -44,7 +44,7 @@ The secret word should be a common, well-known item within that category.
 
 Avoid words that are too obscure or too simple. The goal is to create a fun challenge for players trying to identify an impostor who only knows the category.
 
-Previously used words: {{#if previousWords}}{{join previousWords ", "}}{{else}}None{{/if}}
+Previously used words: {{#if previousWords}}{{#each previousWords}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}None{{/if}}
 
 Please generate a new, unique category and secret word.
 `,
