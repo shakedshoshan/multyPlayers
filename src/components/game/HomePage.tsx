@@ -39,7 +39,14 @@ export function HomePage() {
 
   const handleCreateRoom = async () => {
     setIsCreating(true);
-    await createRoomAction(language);
+    try {
+      const newRoomCode = await createRoomAction(language);
+      router.push(`/game/${newRoomCode}?lang=${language}`);
+    } catch (error) {
+      console.error('Failed to create room:', error);
+      // Optionally, show an error toast to the user
+      setIsCreating(false);
+    }
   };
 
   return (

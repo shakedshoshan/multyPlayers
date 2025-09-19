@@ -14,7 +14,9 @@ function generateRoomCode(length: number): string {
   return result;
 }
 
-export async function createRoomAction(language: string = 'en') {
+export async function createRoomAction(
+  language: string = 'en'
+): Promise<string> {
   const roomCode = generateRoomCode(4);
 
   const initialGame: Game = {
@@ -34,5 +36,5 @@ export async function createRoomAction(language: string = 'en') {
   const gameRef = ref(db, `rooms/${roomCode}`);
   await set(gameRef, initialGame);
 
-  redirect(`/game/${roomCode}?lang=${language}`);
+  return roomCode;
 }
