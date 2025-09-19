@@ -1,16 +1,24 @@
-# SynapseSync
+# Game Hub
 
-SynapseSync is a real-time multiplayer word association game where the goal is to think like your friends. Can your group achieve a collective consciousness and all guess the same word for a given category?
+Game Hub is a collection of real-time multiplayer games powered by AI.
 
+## ✨ Games
 
-## ✨ Features
+### 🧠 SynapseSync
+A real-time multiplayer word association game where the goal is to think like your friends. Can your group achieve a collective consciousness and all guess the same word for a given category?
 
 - **Real-time Multiplayer:** Play with friends in a private room.
 - **AI-Powered Categories:** Game categories are dynamically generated each round using Google's Gemini model via Genkit, ensuring a unique experience every time.
 - **Adaptive AI:** The AI adapts the difficulty of categories based on player success rates.
 - **Scoring & Streaks:** Work together to build up your "Hive Mind Streak" by guessing the same word.
-- **Lobby System:** Easily create a room and share a unique code with friends to join.
-- **Responsive Design:** Play on any device, whether it's a desktop or mobile phone.
+
+### 🕵️ The Impostor's Riddle
+A game of deduction and deception. Find the impostor who doesn't know the secret word.
+
+- **Social Deduction:** One player is the Impostor and doesn't know the secret word, only the category.
+- **Dynamic Riddles:** The AI generates a new category and secret word for each round.
+- **Voting System:** Discuss with your friends and vote out who you think the Impostor is.
+- **Timed Rounds:** Identify the Impostor before the timer runs out.
 
 ## 🚀 Tech Stack
 
@@ -34,8 +42,8 @@ To get a local copy up and running, follow these simple steps.
 
 1.  **Clone the repository:**
     ```sh
-    git clone https://github.com/your-username/synapsesync.git
-    cd synapsesync
+    git clone https://github.com/your-username/game-hub.git
+    cd game-hub
     ```
 
 2.  **Install NPM packages:**
