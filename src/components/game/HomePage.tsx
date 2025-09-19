@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -15,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { createRoomAction } from '@/lib/actions';
 
-export function HomePage() {
+export function SynapseSyncPage() {
   const router = useRouter();
   const [roomCode, setRoomCode] = useState('');
   const [isCreating, setIsCreating] = useState(false);
@@ -114,3 +115,4 @@ export function HomePage() {
     </div>
   );
 }
+
