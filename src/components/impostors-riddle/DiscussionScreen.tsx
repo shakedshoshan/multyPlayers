@@ -4,7 +4,7 @@ import { useImpostorRiddle } from '@/contexts/ImpostorRiddleContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlayerAvatar } from '../game/PlayerAvatar';
 import { Button } from '../ui/button';
-import { Check, Hourglass, Info } from 'lucide-react';
+import { Check, Hourglass, Info, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
@@ -64,7 +64,7 @@ export function DiscussionScreen() {
                     <Card key={p.id} className={cn("flex flex-col items-center justify-between p-4", player.votedFor === p.id && "ring-2 ring-primary")}>
                         <PlayerAvatar player={{...p, isBot: false, score: 0}} />
                         <p className="font-bold mt-2 truncate">{p.name}</p>
-                        <div className="h-10 mt-2">
+                        <div className="h-10 mt-2 flex items-center">
                            {player.id !== p.id && (
                              <Button 
                                 onClick={() => handleVote(p.id)}
@@ -74,6 +74,8 @@ export function DiscussionScreen() {
                                 {player.votedFor === p.id ? <Check className='h-4 w-4' /> : "Vote"}
                              </Button>
                            )}
+                           {player.id === p.id && <div className="h-9"></div>}
+                           
                         </div>
                     </Card>
                 ))}

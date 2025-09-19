@@ -3,14 +3,14 @@
 import { useImpostorRiddle } from '@/contexts/ImpostorRiddleContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trophy, UserX, Loader2 } from 'lucide-react';
+import { Trophy, UserX, Loader2, ArrowLeft } from 'lucide-react';
 import { PlayerAvatar } from '../game/PlayerAvatar';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { RiddlePlayer } from '@/lib/types';
 
 export function RevealScreen() {
-  const { game, player, playAgain } = useImpostorRiddle();
+  const { game, player, playAgain, leaveGame } = useImpostorRiddle();
   const [isStartingNew, setIsStartingNew] = useState(false);
 
   if (!game || !player) return null;
@@ -58,15 +58,20 @@ export function RevealScreen() {
           ))}
         </div>
       </div>
+      
+      <div className='flex items-center gap-4 mt-8'>
+        {player.isHost && (
+            <Button onClick={handlePlayAgain} size="lg" disabled={isStartingNew}>
+              {isStartingNew ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Play Again
+            </Button>
+        )}
+         <Button variant="ghost" onClick={leaveGame}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Leave Game
+        </Button>
+      </div>
 
-      {player.isHost && (
-        <div className="mt-8">
-          <Button onClick={handlePlayAgain} size="lg" disabled={isStartingNew}>
-             {isStartingNew ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Play Again
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

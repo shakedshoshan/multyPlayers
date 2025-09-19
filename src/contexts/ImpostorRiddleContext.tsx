@@ -174,11 +174,10 @@ export function ImpostorRiddleProvider({
       const impostorIndex = Math.floor(Math.random() * players.length);
       
       const playerUpdates: {[key: string]: any} = {};
-      const updatedPlayers = players.map((p, index) => {
+      players.forEach((p, index) => {
         const isImpostor = index === impostorIndex;
         playerUpdates[`players/${p.id}/isImpostor`] = isImpostor;
         playerUpdates[`players/${p.id}/votedFor`] = null;
-        return {...p, isImpostor, votedFor: null};
       });
 
       await update(ref(db, `impostor-riddles/${roomCode}`), {
@@ -199,7 +198,7 @@ export function ImpostorRiddleProvider({
   }, [game, player, roomCode, toast]);
 
   const castVote = async (votedPlayerId: string) => {
-    if (!game || !player || game.gameState !== 'voting') return;
+    if (!game || !player || game.gameState !== 'voting' || player.votedFor) return;
     await update(ref(db, `impostor-riddles/${roomCode}/players/${player.id}`), { votedFor: votedPlayerId });
   };
   
@@ -208,11 +207,10 @@ export function ImpostorRiddleProvider({
 
       const playerUpdates: {[key: string]: any} = {};
       game.players.forEach(p => {
-        playerUpdates[`players/${p.id}/isImpostor`] = false;
-        playerUpdates[`players/${p.id}/votedFor`] = null;
+        playerUpdates[`/players/${p.id}/isImpostor`] = false;
+        playerUpdates[`/players/${p.id}/votedFor`] = null;
       });
       
-      // Reset game to lobby state, keeping players and previous words
       await update(ref(db, `impostor-riddles/${roomCode}`), {
         ...playerUpdates,
         gameState: 'lobby',
@@ -259,7 +257,7 @@ export function ImpostorRiddleProvider({
     // End game when all votes are in
     if (game.gameState === 'voting') {
       const allVoted = game.players.every(p => p.votedFor);
-      if (allVoted) {
+      if (allVoted && game.players.length > 0) {
         const votes: Record<string, number> = {};
         let impostorId = '';
         game.players.forEach(p => {
