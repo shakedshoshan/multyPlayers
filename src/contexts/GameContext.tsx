@@ -72,61 +72,97 @@ export function GameProvider({
 
     return () => unsubscribe();
   }, [roomCode, router, toast]);
-  
-  const joinGame = useCallback(async (name: string) => {
-    if (!game) return;
 
-    const playerId = `player_${Date.now()}`;
-    const gameRef = ref(db, `rooms/${roomCode}`);
-    const snapshot = await get(gameRef);
-    const currentGame: Game = snapshot.val();
+  const joinGame = useCallback(
+    async (name: string) => {
+      if (player) return; // Already joined
 
-    const isHost = !currentGame.players || currentGame.players.length === 0;
-    const newPlayer = createPlayer(playerId, name, isHost);
+      const playerId = `player_${Date.now()}`;
+      const gameRef = ref(db, `rooms/${roomCode}`);
+      const snapshot = await get(gameRef);
 
-    const updatedPlayers = [...(currentGame.players || []), newPlayer];
+      if (!snapshot.exists()) {
+        toast({
+          title: 'Error joining room',
+          description: 'The room no longer exists.',
+          variant: 'destructive',
+        });
+        router.push('/');
+        return;
+      }
+      const currentGame: Game = snapshot.val();
 
-    await update(gameRef, { players: updatedPlayers });
-    setPlayer(newPlayer);
-  }, [game, roomCode]);
+      const isHost = !currentGame.players || currentGame.players.length === 0;
+      const newPlayer = createPlayer(playerId, name, isHost);
+      setPlayer(newPlayer);
+
+      const updatedPlayers = [...(currentGame.players || []), newPlayer];
+
+      await update(gameRef, { players: updatedPlayers });
+    },
+    [roomCode, player, router, toast]
+  );
 
   const fetchNewCategory = useCallback(async () => {
-    if (!game) return;
+    const gameRef = ref(db, `rooms/${roomCode}`);
+    const snapshot = await get(gameRef);
+    if (!snapshot.exists()) return;
+    const currentGame: Game = snapshot.val();
+
     try {
       const successRate =
-        game.round > 0 ? (game.lastRoundSuccess ? 1 : 0) : 0.5;
+        currentGame.round > 1
+          ? currentGame.lastRoundSuccess
+            ? 1
+            : 0
+          : 0.5;
       const result = await generateCategory({
-        previousCategories: game.previousCategories || [],
+        previousCategories: currentGame.previousCategories || [],
         successRate,
-        language: game.language,
+        language: currentGame.language,
       });
-      await update(ref(db, `rooms/${roomCode}`), { category: result.category });
+      await update(gameRef, { category: result.category });
     } catch (error) {
       console.error('Failed to generate category:', error);
-      await update(ref(db, `rooms/${roomCode}`), { category: 'A type of fruit' });
+      await update(gameRef, { category: 'A type of fruit' });
     }
-  }, [game, roomCode]);
+  }, [roomCode]);
 
   const startGame = useCallback(async () => {
-    if (!game || game.gameState !== 'lobby' || !player?.isHost) return;
-    
-    await update(ref(db, `rooms/${roomCode}`), {
+    const gameRef = ref(db, `rooms/${roomCode}`);
+    const snapshot = await get(gameRef);
+    if (!snapshot.exists()) return;
+    const currentGame: Game = snapshot.val();
+
+    if (
+      currentGame.gameState !== 'lobby' ||
+      !player?.isHost ||
+      currentGame.players.length < 2
+    )
+      return;
+
+    await update(gameRef, {
       gameState: 'playing',
       round: 1,
       timer: ROUND_TIME,
       answers: {},
     });
     await fetchNewCategory();
-  }, [game, player, roomCode, fetchNewCategory]);
+  }, [player, roomCode, fetchNewCategory]);
 
   const endRound = useCallback(async () => {
-    if (!game || game.gameState !== 'playing') return;
-    
-    await update(ref(db, `rooms/${roomCode}`), {
+    const gameRef = ref(db, `rooms/${roomCode}`);
+    const snapshot = await get(gameRef);
+    if (!snapshot.exists()) return;
+    const currentGame: Game = snapshot.val();
+
+    if (currentGame.gameState !== 'playing') return;
+
+    await update(gameRef, {
       gameState: 'revealing',
       timer: 0,
     });
-  }, [game, roomCode]);
+  }, [roomCode]);
 
   const submitAnswer = useCallback(
     async (answer: string) => {
@@ -136,64 +172,112 @@ export function GameProvider({
     },
     [game, player, roomCode]
   );
-  
-  const nextRound = useCallback(async () => {
-    if (!game || game.gameState !== 'results' || !player?.isHost) return;
 
-    await update(ref(db, `rooms/${roomCode}`), {
+  const nextRound = useCallback(async () => {
+    const gameRef = ref(db, `rooms/${roomCode}`);
+    const snapshot = await get(gameRef);
+    if (!snapshot.exists()) return;
+    const currentGame: Game = snapshot.val();
+
+    if (currentGame.gameState !== 'results' || !player?.isHost) return;
+
+    await update(gameRef, {
       gameState: 'playing',
-      round: game.round + 1,
+      round: currentGame.round + 1,
       timer: ROUND_TIME,
       answers: {},
-      previousCategories: [...(game.previousCategories || []), game.category],
+      previousCategories: [
+        ...(currentGame.previousCategories || []),
+        currentGame.category,
+      ],
     });
     await fetchNewCategory();
-  }, [game, player, roomCode, fetchNewCategory]);
+  }, [player, roomCode, fetchNewCategory]);
 
   // Timer effect (host only)
   useEffect(() => {
     if (player?.isHost && game?.gameState === 'playing' && game.timer > 0) {
       const interval = setInterval(async () => {
-        const newTime = game.timer - 1;
-        await update(ref(db, `rooms/${roomCode}`), { timer: newTime });
+        const gameRef = ref(db, `rooms/${roomCode}`);
+        const snapshot = await get(gameRef);
+        if (!snapshot.exists()) {
+            clearInterval(interval);
+            return;
+        }
+        const currentTimer = snapshot.val().timer;
+        if(currentTimer > 0) {
+            await update(gameRef, { timer: currentTimer - 1 });
+        } else {
+            clearInterval(interval);
+            endRound();
+        }
       }, 1000);
       return () => clearInterval(interval);
-    } else if (player?.isHost && game?.gameState === 'playing' && game.timer === 0) {
+    } else if (
+      player?.isHost &&
+      game?.gameState === 'playing' &&
+      game.timer <= 0
+    ) {
       endRound();
     }
   }, [game?.gameState, game?.timer, player?.isHost, roomCode, endRound]);
+  
+    // Auto-advance if all players have answered (host only)
+  useEffect(() => {
+    if (
+      player?.isHost &&
+      game?.gameState === 'playing' &&
+      game.answers &&
+      Object.keys(game.answers).length === game.players.length &&
+      game.players.length > 0
+    ) {
+      endRound();
+    }
+  }, [game?.answers, game?.players, game?.gameState, player?.isHost, endRound]);
+
 
   // Results calculation (host only)
   useEffect(() => {
     if (player?.isHost && game?.gameState === 'revealing') {
       const timeout = setTimeout(async () => {
-        const answers: Answers = game.answers || {};
-        const answerValues = Object.values(answers).map((a) => a.toLowerCase().trim());
-        const allMatch =
-          answerValues.length === game.players.length && new Set(answerValues).size === 1;
+        const gameRef = ref(db, `rooms/${roomCode}`);
+        const snapshot = await get(gameRef);
+        if (!snapshot.exists()) return;
+        const currentGame: Game = snapshot.val();
 
-        let newStreak = game.streak;
-        let newPlayers = game.players;
+        const answers: Answers = currentGame.answers || {};
+        const answerValues = Object.values(answers)
+          .map((a) => a.toLowerCase().trim())
+          .filter((a) => a); // Filter out empty answers
+
+        const allMatch =
+          answerValues.length > 0 &&
+          answerValues.length === currentGame.players.length &&
+          new Set(answerValues).size === 1;
+
+        let newStreak = currentGame.streak;
+        let newPlayers = currentGame.players;
 
         if (allMatch) {
-          newStreak = game.streak + 1;
-          newPlayers = game.players.map((p) => ({ ...p, score: p.score + 10 }));
+          newStreak = currentGame.streak + 1;
+          newPlayers = currentGame.players.map((p) => ({
+            ...p,
+            score: p.score + 10,
+          }));
         } else {
           newStreak = 0;
         }
 
-        await update(ref(db, `rooms/${roomCode}`), {
+        await update(gameRef, {
           gameState: 'results',
           streak: newStreak,
           players: newPlayers,
           lastRoundSuccess: allMatch,
         });
-
-      }, 2000 + game.players.length * 500); // Wait for reveal animation
+      }, 2000 + currentGame.players.length * 500); // Wait for reveal animation
       return () => clearTimeout(timeout);
     }
-  }, [player?.isHost, game?.gameState, game?.answers, game?.players, game?.streak, roomCode]);
-
+  }, [player?.isHost, game?.gameState, roomCode]);
 
   const value = { game, player, startGame, submitAnswer, nextRound, joinGame };
 
