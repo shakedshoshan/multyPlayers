@@ -6,13 +6,15 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Users, Copy, Loader2 } from 'lucide-react';
+import { Users, Copy, Loader2, ArrowLeft } from 'lucide-react';
 import { PlayerAvatar } from './PlayerAvatar';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
+import Link from 'next/link';
 
 export function Lobby() {
   const { game, startGame } = useGame();
@@ -33,7 +35,7 @@ export function Lobby() {
     setIsStarting(true);
     startGame();
   };
-  
+
   const canStart = game.players.length > 1;
 
   return (
@@ -73,7 +75,11 @@ export function Lobby() {
           ))}
         </div>
         <div className="mt-8 text-center">
-          <Button size="lg" onClick={handleStartGame} disabled={isStarting || !canStart}>
+          <Button
+            size="lg"
+            onClick={handleStartGame}
+            disabled={isStarting || !canStart}
+          >
             {isStarting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Starting...
@@ -82,9 +88,21 @@ export function Lobby() {
               'Start Game'
             )}
           </Button>
-          {!canStart && <p className="text-muted-foreground mt-2 text-sm">You need at least 2 players to start the game.</p>}
+          {!canStart && (
+            <p className="text-muted-foreground mt-2 text-sm">
+              You need at least 2 players to start the game.
+            </p>
+          )}
         </div>
       </CardContent>
+      <CardFooter className="flex justify-center">
+        <Button variant="ghost" asChild>
+          <Link href="/">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Home
+          </Link>
+        </Button>
+      </CardFooter>
     </Card>
   );
 }
