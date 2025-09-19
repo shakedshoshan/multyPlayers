@@ -26,7 +26,10 @@ export type Game = {
 };
 
 // Types for The Impostor's Riddle
-export type RiddlePlayer = Player & {
+export type RiddlePlayer = {
+    id: string;
+    name: string;
+    isHost: boolean;
     isImpostor: boolean;
     votedFor: string | null; // Player ID they voted for
 };
@@ -42,4 +45,5 @@ export type RiddleGame = {
     timer: number; // 10 minutes = 600 seconds
     votes: Record<string, string>; // Voter ID -> Voted Player ID
     winner: 'knowers' | 'impostor' | null;
+    previousWords: string[];
 };
