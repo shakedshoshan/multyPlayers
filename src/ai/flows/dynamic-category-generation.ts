@@ -41,12 +41,19 @@ const prompt = ai.definePrompt({
   name: 'categoryGenerationPrompt',
   input: {schema: CategoryGenerationInputSchema},
   output: {schema: CategoryGenerationOutputSchema},
-  prompt: `You are a game category generator. Your goal is to generate unique and interesting categories for a game where players have to guess the same answer.
+  prompt: `You are a game category generator. Your goal is to generate broad, general-knowledge, or opinion-based categories for a word association game. The categories should encourage multiple players to arrive at the same answer through popular consensus, not because there's only one right answer.
 
-  The game has had these previous categories: {{previousCategories}}
-  The success rate of the players has been {{successRate}}.
+Good examples:
+- "A country in Europe"
+- "The best cuisine"
+- "The best movie of all time"
+- "A common pet"
+- "A popular car brand"
 
-  Generate a new category that is both challenging and fun, taking into account the previous categories and success rate to avoid repetition and adjust difficulty.
+The game has had these previous categories: {{previousCategories}}
+The success rate of the players has been {{successRate}}.
+
+Generate a new category that is fun and encourages popular answers, taking into account the previous categories and success rate to avoid repetition and adjust difficulty.
 `,
 });
 
