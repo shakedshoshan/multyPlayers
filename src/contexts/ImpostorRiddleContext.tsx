@@ -221,7 +221,7 @@ export function ImpostorRiddleProvider({
         gameState: 'lobby',
         category: '',
         secretWord: '',
-        timer: DISCUSSION_TIME,
+        timer: 0,
         votes: {},
         winner: null,
       });

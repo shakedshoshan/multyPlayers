@@ -21,10 +21,10 @@ export type GenerateRiddleInput = z.infer<typeof GenerateRiddleInputSchema>;
 const GenerateRiddleOutputSchema = z.object({
   category: z
     .string()
-    .describe('A broad category for the secret word (e.g., "Fruits", "Countries", "Car Brands").'),
+    .describe('A broad category for the secret word (e.g., "Musical Instrument", "Country", "Car Brand"). This is a hint about the secret word.'),
   secretWord: z
     .string()
-    .describe('A specific word within the generated category (e.g., "Apple", "Canada", "Toyota").'),
+    .describe('A specific, common word within the generated category (e.g., "Guitar", "Canada", "Toyota").'),
 });
 export type GenerateRiddleOutput = z.infer<typeof GenerateRiddleOutputSchema>;
 
@@ -36,17 +36,16 @@ const prompt = ai.definePrompt({
   name: 'riddleGenerationPrompt',
   input: {schema: GenerateRiddleInputSchema},
   output: {schema: GenerateRiddleOutputSchema},
-  prompt: `You are a game master for a social deduction game called "The Impostor's Riddle."
-Your task is to generate a secret word and a corresponding category.
+  prompt: `You are a game master for a social deduction game. Your task is to generate a secret word and a corresponding category that acts as a hint.
 
-The category should be general enough for multiple items to fit within it.
-The secret word should be a common, well-known item within that category.
-
-Avoid words that are too obscure or too simple. The goal is to create a fun challenge for players trying to identify an impostor who only knows the category.
+Here are the rules:
+1.  The CATEGORY must be a broad topic (e.g., "Musical Instruments", "A type of fruit", "Something in a kitchen").
+2.  The SECRET WORD must be a common, well-known item that fits within that category (e.g., for "Musical Instruments", the secret word could be "Guitar" or "Piano").
+3.  Do NOT repeat any of the previously used words.
 
 Previously used words: {{#if previousWords}}{{#each previousWords}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}None{{/if}}
 
-Please generate a new, unique category and secret word.
+Please generate a new, unique category and secret word based on these rules.
 `,
 });
 
