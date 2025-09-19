@@ -34,6 +34,7 @@ interface GameContextType {
   nextRound: () => void;
   joinGame: (name: string) => void;
   leaveGame: () => void;
+  setLanguage: (lang: string) => void;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -41,11 +42,9 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 export function GameProvider({
   children,
   roomCode,
-  lang,
 }: {
   children: ReactNode;
   roomCode: string;
-  lang: string;
 }) {
   const [game, setGame] = useState<Game | null>(null);
   const [player, setPlayer] = useState<Player | null>(null);
@@ -95,14 +94,22 @@ export function GameProvider({
     const playerRef = ref(db, `rooms/${roomCode}/players/${player.id}`);
     await remove(playerRef);
   
-    const remainingPlayers = game.players.filter(p => p.id !== player.id);
+    const gameRef = ref(db, `rooms/${roomCode}`);
+    const snapshot = await get(gameRef);
+    if (!snapshot.exists()) {
+        setPlayer(null);
+        router.push('/');
+        return;
+    }
+    const currentPlayers = snapshot.val().players ? Object.values(snapshot.val().players) : [];
 
-    if (remainingPlayers.length === 0) {
+
+    if (currentPlayers.length === 0) {
       // If last player leaves, remove the entire room
-      await remove(ref(db, `rooms/${roomCode}`));
+      await remove(gameRef);
     } else if (player.isHost) {
       // If host leaves, assign a new host
-      const newHostId = remainingPlayers[0].id;
+      const newHostId = currentPlayers[0].id;
       await update(ref(db, `rooms/${roomCode}/players/${newHostId}`), { isHost: true });
     }
     
@@ -158,8 +165,10 @@ export function GameProvider({
                if (remaining.length === 0) {
                    remove(gameRef);
                } else if (!remaining.some((p: Player) => p.isHost)) {
-                   const newHostId = remaining[0].id;
-                   update(ref(db, `rooms/${roomCode}/players/${newHostId}`), { isHost: true });
+                   if(remaining[0] && remaining[0].id){
+                    const newHostId = remaining[0].id;
+                    update(ref(db, `rooms/${roomCode}/players/${newHostId}`), { isHost: true });
+                   }
                }
            }
         });
@@ -175,6 +184,11 @@ export function GameProvider({
     },
     [roomCode, player, router, toast]
   );
+  
+  const setLanguage = useCallback(async (lang: string) => {
+    if (!game || !player?.isHost) return;
+    await update(ref(db, `rooms/${roomCode}`), { language: lang });
+  }, [game, player, roomCode]);
 
   const fetchNewCategory = useCallback(async () => {
     if(!game) return;
@@ -337,7 +351,7 @@ export function GameProvider({
     }
   }, [player?.id, player?.isHost, game?.gameState, game?.players, roomCode]);
 
-  const value = { game, player, startGame, submitAnswer, nextRound, joinGame, leaveGame };
+  const value = { game, player, startGame, submitAnswer, nextRound, joinGame, leaveGame, setLanguage };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 }

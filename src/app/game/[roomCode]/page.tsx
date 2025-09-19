@@ -4,7 +4,7 @@ import { GameProvider, useGame } from '@/contexts/GameContext';
 import { Lobby } from '@/components/game/Lobby';
 import { GameScreen } from '@/components/game/GameScreen';
 import { ResultsScreen } from '@/components/game/ResultsScreen';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { JoinScreen } from '@/components/game/JoinScreen';
 
@@ -48,18 +48,16 @@ function GameView() {
 
 export default function GamePage() {
   const params = useParams();
-  const searchParams = useSearchParams();
   const roomCode = Array.isArray(params.roomCode)
     ? params.roomCode[0]
     : params.roomCode;
-  const lang = searchParams.get('lang') || 'en';
 
   if (!roomCode) {
     return null;
   }
 
   return (
-    <GameProvider roomCode={roomCode.toUpperCase()} lang={lang}>
+    <GameProvider roomCode={roomCode.toUpperCase()}>
       <GameView />
     </GameProvider>
   );

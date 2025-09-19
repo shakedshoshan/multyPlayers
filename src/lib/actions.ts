@@ -1,6 +1,5 @@
 'use server';
 
-import { redirect } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { ref, set } from 'firebase/database';
 import type { Game } from './types';
@@ -14,9 +13,7 @@ function generateRoomCode(length: number): string {
   return result;
 }
 
-export async function createRoomAction(
-  language: string = 'en'
-): Promise<string> {
+export async function createRoomAction(language: string = 'en'): Promise<string> {
   const roomCode = generateRoomCode(4);
 
   const initialGame: Game = {
