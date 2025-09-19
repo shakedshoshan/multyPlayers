@@ -9,7 +9,7 @@ import {
   ReactNode,
 } from 'react';
 import { db } from '@/lib/firebase';
-import { ref, onValue, set, update, get } from 'firebase/database';
+import { ref, onValue, set, update, get, remove, onDisconnect } from 'firebase/database';
 import type { Game, Player, Answers } from '@/lib/types';
 import { generateCategory } from '@/ai/flows/dynamic-category-generation';
 import { useToast } from '@/hooks/use-toast';
@@ -32,6 +32,7 @@ interface GameContextType {
   submitAnswer: (answer: string) => void;
   nextRound: () => void;
   joinGame: (name: string) => void;
+  leaveGame: () => void;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -59,19 +60,50 @@ export function GameProvider({
         if (!data.players) data.players = [];
         if (!data.answers) data.answers = {};
         if (!data.previousCategories) data.previousCategories = [];
+        
+        // If players list exists, check if current player is still in it.
+        if (player && data.players.every((p: Player) => p.id !== player.id)) {
+          // Player was removed from the game (e.g. kicked, or data reset)
+          setPlayer(null); 
+          router.push(`/game/${roomCode}`);
+        }
+        
         setGame(data as Game);
       } else {
+        // Game room has been deleted
         toast({
-          title: 'Room not found',
-          description: "This game room doesn't exist.",
-          variant: 'destructive',
+          title: 'Room has been closed',
+          description: "The game room is no longer available.",
         });
         router.push('/');
       }
     });
 
     return () => unsubscribe();
-  }, [roomCode, router, toast]);
+  }, [roomCode, router, toast, player]);
+  
+  const leaveGame = useCallback(async () => {
+    if (!player || !game) return;
+
+    const gameRef = ref(db, `rooms/${roomCode}`);
+    const snapshot = await get(gameRef);
+    if (!snapshot.exists()) return;
+
+    const currentGame: Game = snapshot.val();
+    const updatedPlayers = (currentGame.players || []).filter(p => p.id !== player.id);
+
+    if (updatedPlayers.length === 0) {
+      await remove(gameRef);
+    } else {
+      // If the host leaves, make the next player the host
+      if (player.isHost && updatedPlayers.length > 0) {
+        updatedPlayers[0].isHost = true;
+      }
+      await update(gameRef, { players: updatedPlayers });
+    }
+    setPlayer(null);
+    router.push('/');
+  }, [player, game, roomCode, router]);
 
   const joinGame = useCallback(
     async (name: string) => {
@@ -92,13 +124,36 @@ export function GameProvider({
       }
       const currentGame: Game = snapshot.val();
 
+      if ((currentGame.players || []).length >= 8) {
+        toast({
+          title: 'Room is full',
+          description: 'This game room has reached the maximum number of players.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       const isHost = !currentGame.players || currentGame.players.length === 0;
       const newPlayer = createPlayer(playerId, name, isHost);
-      setPlayer(newPlayer);
+      
 
       const updatedPlayers = [...(currentGame.players || []), newPlayer];
-
       await update(gameRef, { players: updatedPlayers });
+
+      // Set onDisconnect logic
+      const playerRef = ref(db, `rooms/${roomCode}/players`);
+      onDisconnect(playerRef).set(updatedPlayers.filter(p => p.id !== newPlayer.id));
+      
+      const roomRef = ref(db, `rooms/${roomCode}`);
+      onDisconnect(roomRef).get().then(snapshot => {
+        if(snapshot.exists()) {
+            const gameData = snapshot.val();
+            if((gameData.players || []).length <= 1) { // If this is the last player
+                remove(ref(db, `rooms/${roomCode}`));
+            }
+        }
+      });
+      setPlayer(newPlayer);
     },
     [roomCode, player, router, toast]
   );
@@ -245,6 +300,10 @@ export function GameProvider({
         if (!snapshot.exists()) return;
         const currentGame: Game = snapshot.val();
 
+        // Check if host has changed since timeout was set
+        const amIStillHost = (currentGame.players.find(p => p.id === player.id) || {}).isHost;
+        if(!amIStillHost) return;
+
         const answers: Answers = currentGame.answers || {};
         const answerValues = Object.values(answers)
           .map((a) => a.toLowerCase().trim())
@@ -277,9 +336,9 @@ export function GameProvider({
       }, 2000 + currentGame.players.length * 500); // Wait for reveal animation
       return () => clearTimeout(timeout);
     }
-  }, [player?.isHost, game?.gameState, roomCode]);
+  }, [player?.id, player?.isHost, game?.gameState, roomCode, game?.players]);
 
-  const value = { game, player, startGame, submitAnswer, nextRound, joinGame };
+  const value = { game, player, startGame, submitAnswer, nextRound, joinGame, leaveGame };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 }

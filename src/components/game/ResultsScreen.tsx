@@ -13,7 +13,6 @@ import type { Player } from '@/lib/types';
 import { PlayerAvatar } from './PlayerAvatar';
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
-import Link from 'next/link';
 
 function AnswerCard({
   player,
@@ -45,7 +44,7 @@ function AnswerCard({
 }
 
 export function ResultsScreen() {
-  const { game, player, nextRound } = useGame();
+  const { game, player, nextRound, leaveGame } = useGame();
   const [revealed, setRevealed] = useState<string[]>([]);
   const [isStartingNext, setIsStartingNext] = useState(false);
 
@@ -136,11 +135,9 @@ export function ResultsScreen() {
               Next Round
             </Button>
           )}
-           <Button variant="ghost" asChild>
-              <Link href="/">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Leave Game
-              </Link>
+           <Button variant="ghost" onClick={leaveGame}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Leave Game
             </Button>
         </div>
       )}

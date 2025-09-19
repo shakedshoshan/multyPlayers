@@ -14,10 +14,9 @@ import { Users, Copy, Loader2, ArrowLeft } from 'lucide-react';
 import { PlayerAvatar } from './PlayerAvatar';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
-import Link from 'next/link';
 
 export function Lobby() {
-  const { game, player, startGame } = useGame();
+  const { game, player, startGame, leaveGame } = useGame();
   const { toast } = useToast();
   const [isStarting, setIsStarting] = useState(false);
 
@@ -98,11 +97,9 @@ export function Lobby() {
         )}
       </CardContent>
       <CardFooter className="flex justify-center">
-        <Button variant="ghost" asChild>
-          <Link href="/">
+        <Button variant="ghost" onClick={leaveGame}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Home
-          </Link>
         </Button>
       </CardFooter>
     </Card>

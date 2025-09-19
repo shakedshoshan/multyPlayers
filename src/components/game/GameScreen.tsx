@@ -9,12 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Send, Check, ArrowLeft } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
-import Link from 'next/link';
 
 const ROUND_TIME = 30;
 
 export function GameScreen() {
-  const { game, player, submitAnswer } = useGame();
+  const { game, player, submitAnswer, leaveGame } = useGame();
   const [answer, setAnswer] = useState('');
 
   if (!game || !player) return null;
@@ -95,11 +94,9 @@ export function GameScreen() {
             </form>
           </CardContent>
           <CardFooter className="flex justify-center pb-6">
-            <Button variant="ghost" asChild>
-              <Link href="/">
+            <Button variant="ghost" onClick={leaveGame}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Leave Game
-              </Link>
             </Button>
           </CardFooter>
         </Card>
