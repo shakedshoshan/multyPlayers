@@ -11,7 +11,7 @@ function generateRoomCode(length: number): string {
   return result;
 }
 
-export async function createRoomAction() {
+export async function createRoomAction(language: string = 'en') {
   const roomCode = generateRoomCode(4);
-  redirect(`/game/${roomCode}`);
+  redirect(`/game/${roomCode}?lang=${language}`);
 }

@@ -19,4 +19,5 @@ export type Game = {
   answers: Map<string, string>;
   previousCategories: string[];
   lastRoundSuccess: boolean;
+  language: string;
 };

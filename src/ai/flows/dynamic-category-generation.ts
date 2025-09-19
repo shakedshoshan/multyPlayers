@@ -23,6 +23,7 @@ const CategoryGenerationInputSchema = z.object({
     .describe(
       'The success rate of previous rounds (0 to 1), where 1 is 100% success.'
     ),
+  language: z.string().describe('The language for the category. Should be a two-letter ISO 639-1 code.'),
 });
 export type CategoryGenerationInput = z.infer<typeof CategoryGenerationInputSchema>;
 
@@ -41,7 +42,7 @@ const prompt = ai.definePrompt({
   name: 'categoryGenerationPrompt',
   input: {schema: CategoryGenerationInputSchema},
   output: {schema: CategoryGenerationOutputSchema},
-  prompt: `You are a game category generator. Your goal is to generate broad, general-knowledge, or opinion-based categories for a word association game. The categories should encourage multiple players to arrive at the same answer through popular consensus, not because there's only one right answer.
+  prompt: `You are a game category generator. Your goal is to generate broad, general-knowledge, or opinion-based categories for a word association game in the specified language. The categories should encourage multiple players to arrive at the same answer through popular consensus, not because there's only one right answer.
 
 Good examples:
 - "A country in Europe"
@@ -52,8 +53,9 @@ Good examples:
 
 The game has had these previous categories: {{previousCategories}}
 The success rate of the players has been {{successRate}}.
+The language for the category should be: {{language}}
 
-Generate a new category that is fun and encourages popular answers, taking into account the previous categories and success rate to avoid repetition and adjust difficulty.
+Generate a new category in the requested language that is fun and encourages popular answers, taking into account the previous categories and success rate to avoid repetition and adjust difficulty.
 `,
 });
 

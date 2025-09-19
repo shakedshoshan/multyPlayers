@@ -55,9 +55,11 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 export function GameProvider({
   children,
   roomCode,
+  lang,
 }: {
   children: ReactNode;
   roomCode: string;
+  lang: string;
 }) {
   const [game, setGame] = useState<Game | null>(null);
 
@@ -73,8 +75,9 @@ export function GameProvider({
       answers: new Map(),
       previousCategories: [],
       lastRoundSuccess: false,
+      language: lang,
     });
-  }, [roomCode]);
+  }, [roomCode, lang]);
 
   const fetchNewCategory = useCallback(async () => {
     if (!game) return;
@@ -83,6 +86,7 @@ export function GameProvider({
       const result = await generateCategory({
         previousCategories: game.previousCategories,
         successRate,
+        language: game.language,
       });
       setGame((g) => (g ? { ...g, category: result.category } : null));
     } catch (error) {

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { BrainCircuit, Loader2 } from 'lucide-react';
+import { BrainCircuit, Globe, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -14,10 +14,18 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { createRoomAction } from '@/lib/actions';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export function HomePage() {
   const router = useRouter();
   const [roomCode, setRoomCode] = useState('');
+  const [language, setLanguage] = useState('en');
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
 
@@ -25,13 +33,13 @@ export function HomePage() {
     e.preventDefault();
     if (roomCode.trim().length === 4) {
       setIsJoining(true);
-      router.push(`/game/${roomCode.trim().toUpperCase()}`);
+      router.push(`/game/${roomCode.trim().toUpperCase()}?lang=${language}`);
     }
   };
 
   const handleCreateRoom = async () => {
     setIsCreating(true);
-    await createRoomAction();
+    await createRoomAction(language);
   };
 
   return (
@@ -51,6 +59,21 @@ export function HomePage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
+          <div className="grid gap-2 text-left">
+            <Label htmlFor="language-select">Language</Label>
+            <Select value={language} onValueChange={setLanguage}>
+              <SelectTrigger id="language-select" className="w-full">
+                <Globe className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Select language" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="es">Español</SelectItem>
+                <SelectItem value="ar">العربية</SelectItem>
+                <SelectItem value="he">עברית</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <Button
             onClick={handleCreateRoom}
             disabled={isCreating}
