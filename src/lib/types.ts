@@ -24,3 +24,22 @@ export type Game = {
   lastRoundSuccess: boolean;
   language: string;
 };
+
+// Types for The Impostor's Riddle
+export type RiddlePlayer = Player & {
+    isImpostor: boolean;
+    votedFor: string | null; // Player ID they voted for
+};
+
+export type RiddleGameState = 'lobby' | 'discussion' | 'voting' | 'reveal';
+
+export type RiddleGame = {
+    roomCode: string;
+    players: RiddlePlayer[];
+    gameState: RiddleGameState;
+    category: string;
+    secretWord: string;
+    timer: number; // 10 minutes = 600 seconds
+    votes: Record<string, string>; // Voter ID -> Voted Player ID
+    winner: 'knowers' | 'impostor' | null;
+};

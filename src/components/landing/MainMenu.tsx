@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -18,6 +17,12 @@ const games = [
     href: '/synapsesync',
     icon: '🧠',
   },
+  {
+    title: "The Impostor's Riddle",
+    description: 'A game of deduction and deception. Find the impostor who doesn\'t know the secret word.',
+    href: '/impostors-riddle',
+    icon: '🕵️',
+  },
 ];
 
 export function MainMenu() {
@@ -30,7 +35,7 @@ export function MainMenu() {
         Choose a game to play. More games coming soon!
       </p>
 
-      <div className="mt-12 grid gap-8 md:grid-cols-1 lg:grid-cols-1">
+      <div className="mt-12 grid gap-8 md:grid-cols-1 lg:grid-cols-2">
         {games.map((game) => (
           <Link href={game.href} key={game.title} className="group">
             <Card className="w-full max-w-md shadow-2xl transform transition-transform duration-300 group-hover:scale-105 group-hover:shadow-primary/20">
