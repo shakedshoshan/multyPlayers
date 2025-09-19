@@ -15,6 +15,8 @@ import { generateRiddle } from '@/ai/flows/generate-riddle-flow';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 
+const DISCUSSION_TIME = 600; // 10 minutes
+
 const createPlayer = (id: string, name: string, isHost = false): RiddlePlayer => ({
   id,
   name,
@@ -52,7 +54,7 @@ export function ImpostorRiddleProvider({
     const unsubscribe = onValue(gameRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const players = data.players ? Object.values(data.players) : [];
+        const players: RiddlePlayer[] = data.players ? Object.values(data.players) : [];
         const transformedData: RiddleGame = {
           ...data,
           players: players,
@@ -140,12 +142,12 @@ export function ImpostorRiddleProvider({
            const roomSnapshot = await get(gameRef);
            if(roomSnapshot.exists()){
                const gameData = roomSnapshot.val();
-               const remaining = gameData.players ? Object.values(gameData.players) : [];
+               const remaining: RiddlePlayer[] = gameData.players ? Object.values(gameData.players) : [];
                if (remaining.length === 0) {
                    remove(gameRef);
                } else if (!remaining.some((p: RiddlePlayer) => p.isHost)) {
-                   if(remaining[0] && (remaining[0] as RiddlePlayer).id){
-                    const newHostId = (remaining[0] as RiddlePlayer).id;
+                   if(remaining[0] && remaining[0].id){
+                    const newHostId = remaining[0].id;
                     update(ref(db, `impostor-riddles/${roomCode}/players/${newHostId}`), { isHost: true });
                    }
                }
@@ -171,22 +173,22 @@ export function ImpostorRiddleProvider({
       const players = [...game.players];
       const impostorIndex = Math.floor(Math.random() * players.length);
       
-      const playerUpdates: Record<string, Partial<RiddlePlayer>> = {};
-      players.forEach((p, index) => {
-        playerUpdates[p.id] = {
-            isImpostor: index === impostorIndex,
-            votedFor: null,
-        };
+      const playerUpdates: {[key: string]: any} = {};
+      const updatedPlayers = players.map((p, index) => {
+        const isImpostor = index === impostorIndex;
+        playerUpdates[`players/${p.id}/isImpostor`] = isImpostor;
+        playerUpdates[`players/${p.id}/votedFor`] = null;
+        return {...p, isImpostor, votedFor: null};
       });
 
       await update(ref(db, `impostor-riddles/${roomCode}`), {
+        ...playerUpdates,
         gameState: 'discussion',
         category,
         secretWord,
-        timer: 600,
+        timer: DISCUSSION_TIME,
         votes: {},
         winner: null,
-        players: { ...game.players.reduce((acc, p) => ({ ...acc, [p.id]: { ...p, ...playerUpdates[p.id]} }), {}) },
         previousWords: [...(game.previousWords || []), secretWord],
       });
 
@@ -203,16 +205,83 @@ export function ImpostorRiddleProvider({
   
   const playAgain = async () => {
       if (!game || !player?.isHost) return;
+
+      const playerUpdates: {[key: string]: any} = {};
+      game.players.forEach(p => {
+        playerUpdates[`players/${p.id}/isImpostor`] = false;
+        playerUpdates[`players/${p.id}/votedFor`] = null;
+      });
+      
       // Reset game to lobby state, keeping players and previous words
       await update(ref(db, `impostor-riddles/${roomCode}`), {
+        ...playerUpdates,
         gameState: 'lobby',
         category: '',
         secretWord: '',
-        timer: 600,
+        timer: DISCUSSION_TIME,
         votes: {},
         winner: null,
       });
   };
+
+  // Timer effect (host only)
+  useEffect(() => {
+    if (player?.isHost && (game?.gameState === 'discussion' || game?.gameState === 'voting') && game.timer > 0) {
+      const interval = setInterval(async () => {
+        const gameRef = ref(db, `impostor-riddles/${roomCode}`);
+        const snapshot = await get(gameRef);
+        if (!snapshot.exists()) {
+            clearInterval(interval);
+            return;
+        }
+        const currentTimer = snapshot.val().timer;
+        if(currentTimer > 0) {
+            await update(gameRef, { timer: currentTimer - 1 });
+        } else {
+            clearInterval(interval);
+            // Time's up, impostor wins
+            await update(gameRef, { gameState: 'reveal', winner: 'impostor' });
+        }
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [game?.gameState, game?.timer, player?.isHost, roomCode]);
+
+  // Game state transitions (host only)
+  useEffect(() => {
+    if (!game || !player?.isHost) return;
+
+    // Start voting when discussion timer is halfway
+    if (game.gameState === 'discussion' && game.timer <= DISCUSSION_TIME / 2) {
+      update(ref(db, `impostor-riddles/${roomCode}`), { gameState: 'voting' });
+    }
+
+    // End game when all votes are in
+    if (game.gameState === 'voting') {
+      const allVoted = game.players.every(p => p.votedFor);
+      if (allVoted) {
+        const votes: Record<string, number> = {};
+        let impostorId = '';
+        game.players.forEach(p => {
+          if (p.isImpostor) impostorId = p.id;
+          if (p.votedFor) {
+            votes[p.votedFor] = (votes[p.votedFor] || 0) + 1;
+          }
+        });
+
+        const sortedVotes = Object.entries(votes).sort((a, b) => b[1] - a[1]);
+        const mostVotedPlayerId = sortedVotes.length > 0 ? sortedVotes[0][0] : null;
+
+        const winner = mostVotedPlayerId === impostorId ? 'knowers' : 'impostor';
+        
+        update(ref(db, `impostor-riddles/${roomCode}`), {
+          gameState: 'reveal',
+          winner: winner,
+        });
+      }
+    }
+  }, [game, player, roomCode]);
+
 
   const value = { game, player, startGame, castVote, playAgain, joinGame, leaveGame };
 
