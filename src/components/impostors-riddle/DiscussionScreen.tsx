@@ -4,12 +4,12 @@ import { useImpostorRiddle } from '@/contexts/ImpostorRiddleContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlayerAvatar } from '../game/PlayerAvatar';
 import { Button } from '../ui/button';
-import { Check, Hourglass, Info, Loader2 } from 'lucide-react';
+import { Check, Hourglass, Info, Loader2, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 export function DiscussionScreen() {
-  const { game, player, castVote } = useImpostorRiddle();
+  const { game, player, castVote, leaveGame } = useImpostorRiddle();
 
   if (!game || !player) return null;
 
@@ -82,10 +82,14 @@ export function DiscussionScreen() {
              </div>
            </div>
         </CardContent>
-        <CardFooter className='flex-col gap-2'>
+        <CardFooter className='flex-col gap-4'>
             {game.gameState === 'discussion' && <p className="text-muted-foreground">Discussion phase is active. Voting will begin soon.</p>}
             {game.gameState === 'voting' && !playerHasVoted && <p className="text-primary font-semibold">It's time to vote! Who is the impostor?</p>}
             {playerHasVoted && <p className="text-green-500 font-semibold">You have voted! Waiting for other players.</p>}
+             <Button variant="ghost" onClick={leaveGame} className="mt-4">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Leave Game
+            </Button>
         </CardFooter>
       </Card>
     </div>
