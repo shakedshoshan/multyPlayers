@@ -13,12 +13,12 @@ import { Skeleton } from '../ui/skeleton';
 const ROUND_TIME = 30;
 
 export function GameScreen() {
-  const { game, submitAnswer } = useGame();
+  const { game, player, submitAnswer } = useGame();
   const [answer, setAnswer] = useState('');
 
-  if (!game) return null;
+  if (!game || !player) return null;
 
-  const playerHasAnswered = game.answers.has('player1');
+  const playerHasAnswered = game.answers && game.answers[player.id];
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -68,7 +68,7 @@ export function GameScreen() {
                   placeholder="Your answer..."
                   value={answer}
                   onChange={(e) => setAnswer(e.target.value)}
-                  disabled={playerHasAnswered || !game.category}
+                  disabled={!!playerHasAnswered || !game.category}
                   className="text-lg h-12"
                 />
                 <Button
@@ -76,10 +76,14 @@ export function GameScreen() {
                   size="icon"
                   className="h-12 w-12 shrink-0"
                   disabled={
-                    playerHasAnswered || !answer.trim() || !game.category
+                    !!playerHasAnswered || !answer.trim() || !game.category
                   }
                 >
-                  {playerHasAnswered ? <Check className="h-6 w-6"/> : <Send className="h-6 w-6" />}
+                  {playerHasAnswered ? (
+                    <Check className="h-6 w-6" />
+                  ) : (
+                    <Send className="h-6 w-6" />
+                  )}
                 </Button>
               </div>
               {playerHasAnswered && (

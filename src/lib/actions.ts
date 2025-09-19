@@ -1,6 +1,9 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { db } from '@/lib/firebase';
+import { ref, set } from 'firebase/database';
+import type { Game } from './types';
 
 function generateRoomCode(length: number): string {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -13,5 +16,23 @@ function generateRoomCode(length: number): string {
 
 export async function createRoomAction(language: string = 'en') {
   const roomCode = generateRoomCode(4);
+
+  const initialGame: Game = {
+    roomCode,
+    players: [],
+    gameState: 'lobby',
+    category: '',
+    round: 0,
+    streak: 0,
+    timer: 30, // ROUND_TIME
+    answers: {},
+    previousCategories: [],
+    lastRoundSuccess: false,
+    language: language,
+  };
+
+  const gameRef = ref(db, `rooms/${roomCode}`);
+  await set(gameRef, initialGame);
+
   redirect(`/game/${roomCode}?lang=${language}`);
 }

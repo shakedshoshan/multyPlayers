@@ -6,9 +6,10 @@ import { GameScreen } from '@/components/game/GameScreen';
 import { ResultsScreen } from '@/components/game/ResultsScreen';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
+import { JoinScreen } from '@/components/game/JoinScreen';
 
 function GameView() {
-  const { game } = useGame();
+  const { game, player } = useGame();
 
   if (!game) {
     return (
@@ -18,6 +19,10 @@ function GameView() {
         <p className="text-muted-foreground">Syncing with the hive...</p>
       </div>
     );
+  }
+
+  if (!player) {
+    return <JoinScreen />;
   }
 
   const renderGameState = () => {
@@ -50,7 +55,7 @@ export default function GamePage() {
   const lang = searchParams.get('lang') || 'en';
 
   if (!roomCode) {
-    return null; 
+    return null;
   }
 
   return (

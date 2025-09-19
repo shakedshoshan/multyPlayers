@@ -8,46 +8,30 @@ import {
   useCallback,
   ReactNode,
 } from 'react';
-import type { Game, GameState, Player } from '@/lib/types';
+import { db } from '@/lib/firebase';
+import { ref, onValue, set, update, get } from 'firebase/database';
+import type { Game, Player, Answers } from '@/lib/types';
 import { generateCategory } from '@/ai/flows/dynamic-category-generation';
+import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 const ROUND_TIME = 30;
-const BOT_NAMES = ['Synthia', 'Cybrina', 'Unit-734'];
-const POSSIBLE_BOT_ANSWERS = [
-  'apple',
-  'banana',
-  'car',
-  'dog',
-  'moon',
-  'sun',
-  'water',
-  'fire',
-];
 
-const createBot = (id: string, name: string): Player => ({
+const createPlayer = (id: string, name: string, isHost = false): Player => ({
   id,
   name,
-  isHost: false,
-  score: 0,
-  isBot: true,
-});
-
-const createPlayer = (): Player => ({
-  id: 'player1',
-  name: 'You',
-  isHost: true,
+  isHost,
   score: 0,
   isBot: false,
 });
 
-const initialPlayer = createPlayer();
-const initialBots = BOT_NAMES.map((name, i) => createBot(`bot${i + 1}`, name));
-
 interface GameContextType {
   game: Game | null;
+  player: Player | null;
   startGame: () => void;
   submitAnswer: (answer: string) => void;
   nextRound: () => void;
+  joinGame: (name: string) => void;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -62,148 +46,156 @@ export function GameProvider({
   lang: string;
 }) {
   const [game, setGame] = useState<Game | null>(null);
+  const [player, setPlayer] = useState<Player | null>(null);
+  const { toast } = useToast();
+  const router = useRouter();
 
   useEffect(() => {
-    setGame({
-      roomCode,
-      players: [initialPlayer, ...initialBots],
-      gameState: 'lobby',
-      category: '',
-      round: 0,
-      streak: 0,
-      timer: ROUND_TIME,
-      answers: new Map(),
-      previousCategories: [],
-      lastRoundSuccess: false,
-      language: lang,
+    const gameRef = ref(db, `rooms/${roomCode}`);
+    const unsubscribe = onValue(gameRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        // Firebase stores empty arrays as undefined, so we default it
+        if (!data.players) data.players = [];
+        if (!data.answers) data.answers = {};
+        if (!data.previousCategories) data.previousCategories = [];
+        setGame(data as Game);
+      } else {
+        toast({
+          title: 'Room not found',
+          description: "This game room doesn't exist.",
+          variant: 'destructive',
+        });
+        router.push('/');
+      }
     });
-  }, [roomCode, lang]);
+
+    return () => unsubscribe();
+  }, [roomCode, router, toast]);
+  
+  const joinGame = useCallback(async (name: string) => {
+    if (!game) return;
+
+    const playerId = `player_${Date.now()}`;
+    const gameRef = ref(db, `rooms/${roomCode}`);
+    const snapshot = await get(gameRef);
+    const currentGame: Game = snapshot.val();
+
+    const isHost = !currentGame.players || currentGame.players.length === 0;
+    const newPlayer = createPlayer(playerId, name, isHost);
+
+    const updatedPlayers = [...(currentGame.players || []), newPlayer];
+
+    await update(gameRef, { players: updatedPlayers });
+    setPlayer(newPlayer);
+  }, [game, roomCode]);
 
   const fetchNewCategory = useCallback(async () => {
     if (!game) return;
     try {
-      const successRate = game.round > 0 ? (game.lastRoundSuccess ? 1 : 0) : 0.5;
+      const successRate =
+        game.round > 0 ? (game.lastRoundSuccess ? 1 : 0) : 0.5;
       const result = await generateCategory({
-        previousCategories: game.previousCategories,
+        previousCategories: game.previousCategories || [],
         successRate,
         language: game.language,
       });
-      setGame((g) => (g ? { ...g, category: result.category } : null));
+      await update(ref(db, `rooms/${roomCode}`), { category: result.category });
     } catch (error) {
       console.error('Failed to generate category:', error);
-      setGame((g) => (g ? { ...g, category: 'A type of fruit' } : null));
+      await update(ref(db, `rooms/${roomCode}`), { category: 'A type of fruit' });
     }
-  }, [game]);
+  }, [game, roomCode]);
 
   const startGame = useCallback(async () => {
-    if (!game || game.gameState !== 'lobby') return;
-    setGame((g) =>
-      g
-        ? {
-            ...g,
-            gameState: 'playing',
-            round: 1,
-            timer: ROUND_TIME,
-            answers: new Map(),
-          }
-        : null
-    );
-    await fetchNewCategory();
-  }, [game, fetchNewCategory]);
-
-  const endRound = useCallback(() => {
-    if (!game || game.gameState !== 'playing') return;
-
-    const finalAnswers = new Map(game.answers);
-    game.players.forEach((p) => {
-      if (p.isBot && !finalAnswers.has(p.id)) {
-        const playerAnswer = finalAnswers.get('player1');
-        if (playerAnswer && Math.random() < 0.5) {
-          finalAnswers.set(p.id, playerAnswer);
-        } else {
-          finalAnswers.set(
-            p.id,
-            POSSIBLE_BOT_ANSWERS[
-              Math.floor(Math.random() * POSSIBLE_BOT_ANSWERS.length)
-            ]
-          );
-        }
-      }
+    if (!game || game.gameState !== 'lobby' || !player?.isHost) return;
+    
+    await update(ref(db, `rooms/${roomCode}`), {
+      gameState: 'playing',
+      round: 1,
+      timer: ROUND_TIME,
+      answers: {},
     });
+    await fetchNewCategory();
+  }, [game, player, roomCode, fetchNewCategory]);
 
-    setGame((g) =>
-      g ? { ...g, gameState: 'revealing', timer: 0, answers: finalAnswers } : null
-    );
-  }, [game]);
+  const endRound = useCallback(async () => {
+    if (!game || game.gameState !== 'playing') return;
+    
+    await update(ref(db, `rooms/${roomCode}`), {
+      gameState: 'revealing',
+      timer: 0,
+    });
+  }, [game, roomCode]);
 
   const submitAnswer = useCallback(
-    (answer: string) => {
-      if (!game || game.gameState !== 'playing') return;
-      const newAnswers = new Map(game.answers);
-      newAnswers.set('player1', answer);
-      setGame((g) => (g ? { ...g, answers: newAnswers } : null));
+    async (answer: string) => {
+      if (!game || game.gameState !== 'playing' || !player) return;
+      const answerPath = `rooms/${roomCode}/answers/${player.id}`;
+      await set(ref(db, answerPath), answer);
     },
-    [game]
+    [game, player, roomCode]
   );
-
+  
   const nextRound = useCallback(async () => {
-    if (!game || game.gameState !== 'results') return;
-    setGame((g) =>
-      g
-        ? {
-            ...g,
-            gameState: 'playing',
-            round: g.round + 1,
-            timer: ROUND_TIME,
-            answers: new Map(),
-            previousCategories: [...g.previousCategories, g.category],
-          }
-        : null
-    );
-    await fetchNewCategory();
-  }, [game, fetchNewCategory]);
+    if (!game || game.gameState !== 'results' || !player?.isHost) return;
 
+    await update(ref(db, `rooms/${roomCode}`), {
+      gameState: 'playing',
+      round: game.round + 1,
+      timer: ROUND_TIME,
+      answers: {},
+      previousCategories: [...(game.previousCategories || []), game.category],
+    });
+    await fetchNewCategory();
+  }, [game, player, roomCode, fetchNewCategory]);
+
+  // Timer effect (host only)
   useEffect(() => {
-    if (game?.gameState === 'playing' && game.timer > 0) {
-      const interval = setInterval(() => {
-        setGame((g) => (g ? { ...g, timer: g.timer - 1 } : null));
+    if (player?.isHost && game?.gameState === 'playing' && game.timer > 0) {
+      const interval = setInterval(async () => {
+        const newTime = game.timer - 1;
+        await update(ref(db, `rooms/${roomCode}`), { timer: newTime });
       }, 1000);
       return () => clearInterval(interval);
-    } else if (game?.gameState === 'playing' && game.timer === 0) {
+    } else if (player?.isHost && game?.gameState === 'playing' && game.timer === 0) {
       endRound();
     }
-  }, [game?.gameState, game?.timer, endRound]);
+  }, [game?.gameState, game?.timer, player?.isHost, roomCode, endRound]);
 
+  // Results calculation (host only)
   useEffect(() => {
-    if (game?.gameState === 'revealing') {
-      const timeout = setTimeout(() => {
-        const answers = Array.from(game.answers.values()).map((a) =>
-          a.toLowerCase().trim()
-        );
+    if (player?.isHost && game?.gameState === 'revealing') {
+      const timeout = setTimeout(async () => {
+        const answers: Answers = game.answers || {};
+        const answerValues = Object.values(answers).map((a) => a.toLowerCase().trim());
         const allMatch =
-          answers.length === game.players.length && new Set(answers).size === 1;
+          answerValues.length === game.players.length && new Set(answerValues).size === 1;
 
-        setGame((g) => {
-          if (!g) return null;
-          const newStreak = allMatch ? g.streak + 1 : 0;
-          const newPlayers = allMatch
-            ? g.players.map((p) => ({ ...p, score: p.score + 10 }))
-            : g.players;
+        let newStreak = game.streak;
+        let newPlayers = game.players;
 
-          return {
-            ...g,
-            gameState: 'results',
-            streak: newStreak,
-            players: newPlayers,
-            lastRoundSuccess: allMatch,
-          };
+        if (allMatch) {
+          newStreak = game.streak + 1;
+          newPlayers = game.players.map((p) => ({ ...p, score: p.score + 10 }));
+        } else {
+          newStreak = 0;
+        }
+
+        await update(ref(db, `rooms/${roomCode}`), {
+          gameState: 'results',
+          streak: newStreak,
+          players: newPlayers,
+          lastRoundSuccess: allMatch,
         });
-      }, 2000 + game.players.length * 500);
+
+      }, 2000 + game.players.length * 500); // Wait for reveal animation
       return () => clearTimeout(timeout);
     }
-  }, [game?.gameState, game?.answers, game?.players]);
+  }, [player?.isHost, game?.gameState, game?.answers, game?.players, game?.streak, roomCode]);
 
-  const value = { game, startGame, submitAnswer, nextRound };
+
+  const value = { game, player, startGame, submitAnswer, nextRound, joinGame };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 }

@@ -8,6 +8,9 @@ export type Player = {
 
 export type GameState = 'lobby' | 'playing' | 'revealing' | 'results';
 
+// Use a Record for answers to be Firebase-friendly
+export type Answers = Record<string, string>;
+
 export type Game = {
   roomCode: string;
   players: Player[];
@@ -16,7 +19,7 @@ export type Game = {
   round: number;
   streak: number;
   timer: number;
-  answers: Map<string, string>;
+  answers: Answers;
   previousCategories: string[];
   lastRoundSuccess: boolean;
   language: string;

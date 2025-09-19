@@ -38,7 +38,7 @@ function AnswerCard({
 }
 
 export function ResultsScreen() {
-  const { game, nextRound } = useGame();
+  const { game, player, nextRound } = useGame();
   const [revealed, setRevealed] = useState<string[]>([]);
   const [isStartingNext, setIsStartingNext] = useState(false);
 
@@ -57,7 +57,7 @@ export function ResultsScreen() {
     }
   }, [game?.gameState, game?.players, revealed.length]);
 
-  if (!game) return null;
+  if (!game || !player) return null;
 
   const handleNextRound = () => {
     setIsStartingNext(true);
@@ -95,18 +95,18 @@ export function ResultsScreen() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full mt-8">
-        {players.map((player) => (
-          <div key={player.id} className="[perspective:1000px]">
+        {players.map((p) => (
+          <div key={p.id} className="[perspective:1000px]">
             <AnswerCard
-              player={player}
-              answer={answers.get(player.id) || '...'}
-              isRevealed={revealed.includes(player.id)}
+              player={p}
+              answer={answers[p.id] || '...'}
+              isRevealed={revealed.includes(p.id)}
             />
           </div>
         ))}
       </div>
 
-      {!isRevealing && (
+      {!isRevealing && player.isHost && (
         <Button
           size="lg"
           onClick={handleNextRound}
