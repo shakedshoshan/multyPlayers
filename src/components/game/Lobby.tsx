@@ -33,6 +33,8 @@ export function Lobby() {
     setIsStarting(true);
     startGame();
   };
+  
+  const canStart = game.players.length > 1;
 
   return (
     <Card className="w-full max-w-2xl animate-in fade-in-0 zoom-in-95 shadow-2xl">
@@ -71,7 +73,7 @@ export function Lobby() {
           ))}
         </div>
         <div className="mt-8 text-center">
-          <Button size="lg" onClick={handleStartGame} disabled={isStarting}>
+          <Button size="lg" onClick={handleStartGame} disabled={isStarting || !canStart}>
             {isStarting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Starting...
@@ -80,6 +82,7 @@ export function Lobby() {
               'Start Game'
             )}
           </Button>
+          {!canStart && <p className="text-muted-foreground mt-2 text-sm">You need at least 2 players to start the game.</p>}
         </div>
       </CardContent>
     </Card>
