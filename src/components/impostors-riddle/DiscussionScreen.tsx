@@ -60,8 +60,14 @@ export function DiscussionScreen() {
            <div className="mt-8">
             <h3 className="text-xl font-bold mb-4">Players</h3>
              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {game.players.map(p => (
-                    <Card key={p.id} className={cn("flex flex-col items-center justify-between p-4", player.votedFor === p.id && "ring-2 ring-primary")}>
+                {game.players.map(p => {
+                  const isVotedPlayer = player.votedFor === p.id;
+                  return (
+                    <Card key={p.id} className={cn(
+                        "flex flex-col items-center justify-between p-4 transition-all", 
+                        isVotedPlayer && "ring-4 ring-primary shadow-lg scale-105",
+                        playerHasVoted && !isVotedPlayer && "opacity-60"
+                      )}>
                         <PlayerAvatar player={{...p, isBot: false, score: 0}} />
                         <p className="font-bold mt-2 truncate">{p.name}</p>
                         <div className="h-10 mt-2 flex items-center">
@@ -69,16 +75,21 @@ export function DiscussionScreen() {
                              <Button 
                                 onClick={() => handleVote(p.id)}
                                 disabled={playerHasVoted}
+                                variant={isVotedPlayer ? 'secondary' : 'default'}
                                 size="sm"
                              >
-                                {player.votedFor === p.id ? <Check className='h-4 w-4' /> : "Vote"}
+                                {isVotedPlayer ? (
+                                  <>
+                                    <Check className='h-4 w-4 mr-2' /> Voted
+                                  </>
+                                ) : "Vote"}
                              </Button>
                            )}
                            {player.id === p.id && <div className="h-9"></div>}
                            
                         </div>
                     </Card>
-                ))}
+                )})}
              </div>
            </div>
         </CardContent>
