@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useGame } from '@/contexts/GameContext';
@@ -31,13 +32,14 @@ function AnswerCard({
       )}
     >
       {/* Card Back - initially visible */}
-      <div className="absolute inset-0 flex h-40 w-full items-center justify-center rounded-lg bg-primary [backface-visibility:hidden]">
+      <div className="absolute inset-0 flex h-40 w-full flex-col items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground [backface-visibility:hidden]">
         <PlayerAvatar player={player} />
+        <p className="font-bold">{player.name}</p>
       </div>
       {/* Card Front - initially hidden */}
-      <div className="flex h-40 w-full flex-col items-center justify-center rounded-lg border bg-card p-2 [transform:rotateY(180deg)] [backface-visibility:hidden]">
-        <p className="text-sm text-muted-foreground">{player.name}</p>
-        <p className="break-all p-2 text-center text-xl font-bold md:text-2xl">
+      <div className="flex h-40 w-full flex-col items-center justify-center rounded-lg border bg-card p-4 [transform:rotateY(180deg)] [backface-visibility:hidden]">
+        <p className="font-medium text-muted-foreground">{player.name}</p>
+        <p className="w-full break-words p-2 text-center text-2xl font-extrabold md:text-3xl">
           {answer}
         </p>
       </div>
@@ -164,3 +166,4 @@ export function ResultsScreen() {
     </div>
   );
 }
+
