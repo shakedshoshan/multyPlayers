@@ -2,7 +2,6 @@
 
 SynapseSync is a real-time multiplayer word association game where the goal is to think like your friends. Can your group achieve a collective consciousness and all guess the same word for a given category?
 
-![SynapseSync Gameplay](https://placehold.co/800x400?text=SynapseSync+Gameplay+Screenshot)
 
 ## ✨ Features
 
