@@ -30,10 +30,12 @@ function AnswerCard({
         isRevealed ? '[transform:rotateY(0deg)]' : '[transform:rotateY(180deg)]'
       )}
     >
+      {/* Card Back - initially visible */}
       <div className="absolute inset-0 flex h-40 w-full items-center justify-center rounded-lg bg-primary [backface-visibility:hidden]">
         <PlayerAvatar player={player} />
       </div>
-      <div className="flex h-40 w-full flex-col items-center justify-center rounded-lg border bg-card p-2 [backface-visibility:hidden] [transform:rotateY(180deg)]">
+      {/* Card Front - initially hidden */}
+      <div className="flex h-40 w-full flex-col items-center justify-center rounded-lg border bg-card p-2 [transform:rotateY(180deg)] [backface-visibility:hidden]">
         <p className="text-sm text-muted-foreground">{player.name}</p>
         <p className="break-all p-2 text-center text-xl font-bold md:text-2xl">
           {answer}
@@ -47,16 +49,19 @@ export function ResultsScreen() {
   const { game, player, nextRound, leaveGame } = useGame();
   const [revealed, setRevealed] = useState<string[]>([]);
   const [isStartingNext, setIsStartingNext] = useState(false);
+  const [showResults, setShowResults] = useState(false);
 
   useEffect(() => {
+    // Start revealing cards when the state is 'revealing'
     if (
       game?.gameState === 'revealing' &&
       game.players.length > revealed.length
     ) {
       const revealInterval = setInterval(() => {
         setRevealed((r) => {
-          if (r.length < game.players.length) {
-            return [...r, game.players[r.length].id];
+          const nextIndex = r.length;
+          if (nextIndex < game.players.length) {
+            return [...r, game.players[nextIndex].id];
           }
           clearInterval(revealInterval);
           return r;
@@ -66,6 +71,21 @@ export function ResultsScreen() {
     }
   }, [game?.gameState, game?.players, revealed.length]);
 
+  useEffect(() => {
+    // When all cards are revealed and we are in the 'results' state, show the final result
+    if (game?.gameState === 'results' && !showResults) {
+      const timer = setTimeout(() => {
+        setShowResults(true);
+      }, 250); // Short delay after last card flips to show result
+      return () => clearTimeout(timer);
+    }
+    // Reset for next round
+    if (game?.gameState !== 'results' && game?.gameState !== 'revealing') {
+        setRevealed([]);
+        setShowResults(false);
+    }
+  }, [game?.gameState, showResults]);
+
   if (!game || !player) return null;
 
   const handleNextRound = () => {
@@ -74,14 +94,14 @@ export function ResultsScreen() {
   };
 
   const { gameState, lastRoundSuccess, streak, players, answers } = game;
-  const isRevealing = gameState === 'revealing';
+  const isFinished = gameState === 'results';
 
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col gap-6 items-center text-center animate-in fade-in-0">
       <div
         className={cn(
-          'transition-opacity duration-1000',
-          isRevealing ? 'opacity-0' : 'opacity-100'
+          'transition-all duration-700 ease-in-out',
+          showResults ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
         )}
       >
         {lastRoundSuccess ? (
@@ -119,8 +139,8 @@ export function ResultsScreen() {
         ))}
       </div>
 
-      {!isRevealing && (
-        <div className="mt-8 animate-in fade-in slide-in-from-bottom-5 delay-1000 duration-500 fill-mode-both flex items-center gap-4">
+      {isFinished && (
+        <div className="mt-8 animate-in fade-in slide-in-from-bottom-5 delay-500 duration-500 fill-mode-both flex items-center gap-4">
           {player.isHost && (
             <Button
               size="lg"

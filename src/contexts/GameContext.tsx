@@ -223,6 +223,7 @@ export function GameProvider({
       round: 1,
       timer: ROUND_TIME,
       answers: {},
+      previousCategories: game.previousCategories || [],
     });
   }, [player, game, roomCode, fetchNewCategory]);
 
@@ -351,7 +352,7 @@ export function GameProvider({
           players: newPlayersData,
           lastRoundSuccess: allMatch,
         });
-      }, 2000 + game.players.length * 500); // Wait for reveal animation
+      }, 500 + game.players.length * 500); // Wait for reveal animation
       return () => clearTimeout(timeout);
     }
   }, [player?.id, player?.isHost, game?.gameState, game?.players, roomCode]);
