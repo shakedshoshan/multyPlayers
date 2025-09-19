@@ -57,25 +57,31 @@ export function GameProvider({
     const unsubscribe = onValue(gameRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        // Firebase stores empty arrays as undefined, so we default it
-        if (!data.players) data.players = [];
-        if (!data.answers) data.answers = {};
-        if (!data.previousCategories) data.previousCategories = [];
+        // Firebase stores empty objects/arrays as null, so we default them
+        const players = data.players ? Object.values(data.players) : [];
+        const transformedData: Game = {
+          ...data,
+          players: players,
+          answers: data.answers || {},
+          previousCategories: data.previousCategories || [],
+        };
         
-        // If players list exists, check if current player is still in it.
-        if (player && data.players.every((p: Player) => p.id !== player.id)) {
+        // If player is set, check if they are still in the game
+        if (player && !players.some((p: Player) => p.id === player.id)) {
           // Player was removed from the game (e.g. kicked, or data reset)
           setPlayer(null); 
           router.push(`/game/${roomCode}`);
         }
         
-        setGame(data as Game);
+        setGame(transformedData);
       } else {
         // Game room has been deleted
         toast({
           title: 'Room has been closed',
           description: "The game room is no longer available.",
         });
+        setGame(null);
+        setPlayer(null);
         router.push('/');
       }
     });
@@ -89,30 +95,21 @@ export function GameProvider({
     const playerRef = ref(db, `rooms/${roomCode}/players/${player.id}`);
     await remove(playerRef);
   
-    const gameRef = ref(db, `rooms/${roomCode}`);
-    const snapshot = await get(gameRef);
-    if (!snapshot.exists()) {
-      setPlayer(null);
-      router.push('/');
-      return;
-    }
-  
-    const currentGame: Game = snapshot.val();
-    const remainingPlayers = currentGame.players ? Object.values(currentGame.players) : [];
-  
+    const remainingPlayers = game.players.filter(p => p.id !== player.id);
+
     if (remainingPlayers.length === 0) {
-      await remove(gameRef);
-    } else {
-      const isHostStillPresent = remainingPlayers.some(p => p.isHost);
-      if (!isHostStillPresent && remainingPlayers.length > 0) {
-        const newHostId = remainingPlayers[0].id;
-        await update(ref(db, `rooms/${roomCode}/players/${newHostId}`), { isHost: true });
-      }
+      // If last player leaves, remove the entire room
+      await remove(ref(db, `rooms/${roomCode}`));
+    } else if (player.isHost) {
+      // If host leaves, assign a new host
+      const newHostId = remainingPlayers[0].id;
+      await update(ref(db, `rooms/${roomCode}/players/${newHostId}`), { isHost: true });
     }
-  
+    
     setPlayer(null);
     router.push('/');
   }, [player, game, roomCode, router]);
+
 
   const joinGame = useCallback(
     async (name: string) => {
@@ -134,10 +131,9 @@ export function GameProvider({
           return;
         }
         
-        const currentGame: Game = snapshot.val();
-        const players = currentGame.players ? Object.values(currentGame.players) : [];
+        const currentPlayers = snapshot.val().players ? Object.values(snapshot.val().players) : [];
 
-        if (players.length >= 8) {
+        if (currentPlayers.length >= 8) {
           toast({
             title: 'Room is full',
             description: 'This game room has reached the maximum number of players.',
@@ -146,31 +142,27 @@ export function GameProvider({
           return;
         }
 
-        const isHost = players.length === 0;
+        const isHost = currentPlayers.length === 0;
         const newPlayer = createPlayer(playerId, name, isHost);
         
         const playerRef = ref(db, `rooms/${roomCode}/players/${playerId}`);
         await set(playerRef, newPlayer);
-
-        onDisconnect(playerRef).remove();
-
-        onDisconnect(gameRef).get().then(snap => {
-            if (snap.exists()) {
-                const gameData = snap.val();
-                const remainingPlayers = gameData.players ? Object.values(gameData.players) : [];
-                if (remainingPlayers.length === 0) {
-                    remove(gameRef);
-                } else {
-                    const isHostStillPresent = remainingPlayers.some(p => p.isHost);
-                    if (!isHostStillPresent && remainingPlayers.length > 0) {
-                        const newHostId = remainingPlayers[0].id;
-                        update(ref(db, `rooms/${roomCode}/players/${newHostId}`), { isHost: true });
-                    }
-                }
-            }
-        });
-
         setPlayer(newPlayer);
+
+        // Set up onDisconnect logic
+        onDisconnect(playerRef).remove().then(async () => {
+           const roomSnapshot = await get(gameRef);
+           if(roomSnapshot.exists()){
+               const gameData = roomSnapshot.val();
+               const remaining = gameData.players ? Object.values(gameData.players) : [];
+               if (remaining.length === 0) {
+                   remove(gameRef);
+               } else if (!remaining.some((p: Player) => p.isHost)) {
+                   const newHostId = remaining[0].id;
+                   update(ref(db, `rooms/${roomCode}/players/${newHostId}`), { isHost: true });
+               }
+           }
+        });
 
       } catch (error) {
         console.error("Join game error:", error);
@@ -185,60 +177,44 @@ export function GameProvider({
   );
 
   const fetchNewCategory = useCallback(async () => {
-    const gameRef = ref(db, `rooms/${roomCode}`);
-    const snapshot = await get(gameRef);
-    if (!snapshot.exists()) return;
-    const currentGame: Game = snapshot.val();
-
+    if(!game) return;
     try {
       const successRate =
-        currentGame.round > 1
-          ? currentGame.lastRoundSuccess
+        game.round > 1
+          ? game.lastRoundSuccess
             ? 1
             : 0
           : 0.5;
       const result = await generateCategory({
-        previousCategories: currentGame.previousCategories || [],
+        previousCategories: game.previousCategories || [],
         successRate,
-        language: currentGame.language,
+        language: game.language,
       });
-      await update(gameRef, { category: result.category });
+      await update(ref(db, `rooms/${roomCode}`), { category: result.category });
     } catch (error) {
       console.error('Failed to generate category:', error);
-      await update(gameRef, { category: 'A type of fruit' });
+      await update(ref(db, `rooms/${roomCode}`), { category: 'A type of fruit' }); // Fallback
     }
-  }, [roomCode]);
+  }, [game, roomCode]);
 
   const startGame = useCallback(async () => {
-    const gameRef = ref(db, `rooms/${roomCode}`);
-    const snapshot = await get(gameRef);
-    if (!snapshot.exists()) return;
-    const currentGame: Game = snapshot.val();
-    const players = currentGame.players ? Object.values(currentGame.players) : [];
+    if (!game || !player?.isHost || game.gameState !== 'lobby' || game.players.length < 2) {
+        return;
+    }
 
-    if (
-      currentGame.gameState !== 'lobby' ||
-      !player?.isHost ||
-      players.length < 2
-    )
-      return;
-
-    await update(gameRef, {
+    await update(ref(db, `rooms/${roomCode}`), {
       gameState: 'playing',
       round: 1,
       timer: ROUND_TIME,
       answers: {},
     });
     await fetchNewCategory();
-  }, [player, roomCode, fetchNewCategory]);
+  }, [player, game, roomCode, fetchNewCategory]);
 
   const endRound = useCallback(async () => {
     const gameRef = ref(db, `rooms/${roomCode}`);
     const snapshot = await get(gameRef);
-    if (!snapshot.exists()) return;
-    const currentGame: Game = snapshot.val();
-
-    if (currentGame.gameState !== 'playing') return;
+    if (!snapshot.exists() || snapshot.val().gameState !== 'playing') return;
 
     await update(gameRef, {
       gameState: 'revealing',
@@ -256,25 +232,20 @@ export function GameProvider({
   );
 
   const nextRound = useCallback(async () => {
-    const gameRef = ref(db, `rooms/${roomCode}`);
-    const snapshot = await get(gameRef);
-    if (!snapshot.exists()) return;
-    const currentGame: Game = snapshot.val();
+    if (!game || !player?.isHost || game.gameState !== 'results') return;
 
-    if (currentGame.gameState !== 'results' || !player?.isHost) return;
-
-    await update(gameRef, {
+    await update(ref(db, `rooms/${roomCode}`), {
       gameState: 'playing',
-      round: currentGame.round + 1,
+      round: game.round + 1,
       timer: ROUND_TIME,
       answers: {},
       previousCategories: [
-        ...(currentGame.previousCategories || []),
-        currentGame.category,
+        ...(game.previousCategories || []),
+        game.category,
       ],
     });
     await fetchNewCategory();
-  }, [player, roomCode, fetchNewCategory]);
+  }, [player, game, roomCode, fetchNewCategory]);
 
   // Timer effect (host only)
   useEffect(() => {
@@ -308,12 +279,9 @@ export function GameProvider({
   useEffect(() => {
     if (!game || !player?.isHost || game.gameState !== 'playing') return;
 
-    const players = game.players ? Object.values(game.players) : [];
-    const answers = game.answers || {};
-
     if (
-      players.length > 0 &&
-      Object.keys(answers).length === players.length
+      game.players.length > 0 &&
+      Object.keys(game.answers).length === game.players.length
     ) {
       endRound();
     }
@@ -323,15 +291,16 @@ export function GameProvider({
   // Results calculation (host only)
   useEffect(() => {
     if (player?.isHost && game?.gameState === 'revealing') {
-      const players = game.players ? Object.values(game.players) : [];
       const timeout = setTimeout(async () => {
         const gameRef = ref(db, `rooms/${roomCode}`);
         const snapshot = await get(gameRef);
         if (!snapshot.exists()) return;
-        const currentGame: Game = snapshot.val();
+        const currentGame = snapshot.val();
         
         const currentPlayers = currentGame.players ? Object.values(currentGame.players) : [];
-        const amIStillHost = (currentPlayers.find(p => p.id === player.id) || {}).isHost;
+        if (currentPlayers.length === 0) return;
+
+        const amIStillHost = (currentPlayers.find((p:Player) => p.id === player.id) || {}).isHost;
         if(!amIStillHost) return;
 
         const answers: Answers = currentGame.answers || {};
@@ -345,17 +314,14 @@ export function GameProvider({
           new Set(answerValues).size === 1;
 
         let newStreak = currentGame.streak;
-        let newPlayersData = currentGame.players;
+        let newPlayersData: Record<string, Player> = {...currentGame.players};
 
         if (allMatch) {
           newStreak = currentGame.streak + 1;
           
-          const updatedPlayers: Record<string, Player> = {};
-          currentPlayers.forEach(p => {
-              updatedPlayers[p.id] = { ...p, score: p.score + 10 };
+          currentPlayers.forEach((p: Player) => {
+              newPlayersData[p.id] = { ...p, score: p.score + 10 };
           });
-          newPlayersData = updatedPlayers;
-
         } else {
           newStreak = 0;
         }
@@ -366,12 +332,12 @@ export function GameProvider({
           players: newPlayersData,
           lastRoundSuccess: allMatch,
         });
-      }, 2000 + players.length * 500); // Wait for reveal animation
+      }, 2000 + game.players.length * 500); // Wait for reveal animation
       return () => clearTimeout(timeout);
     }
   }, [player?.id, player?.isHost, game?.gameState, game?.players, roomCode]);
 
-  const value = { game: game ? { ...game, players: game.players ? Object.values(game.players) : [] } : null, player, startGame, submitAnswer, nextRound, joinGame, leaveGame };
+  const value = { game, player, startGame, submitAnswer, nextRound, joinGame, leaveGame };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 }
