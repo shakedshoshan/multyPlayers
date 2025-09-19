@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 
 const DISCUSSION_TIME = 600; // 10 minutes
+const VOTING_START_TIME = DISCUSSION_TIME - 60; // Voting starts after 1 minute of discussion
 
 const createPlayer = (id: string, name: string, isHost = false): RiddlePlayer => ({
   id,
@@ -85,7 +86,7 @@ export function ImpostorRiddleProvider({
     });
 
     return () => unsubscribe();
-  }, [roomCode, router, toast, player?.id]);
+  }, [roomCode, router, toast]);
   
   const leaveGame = useCallback(async () => {
     if (!player || !game) return;
@@ -203,7 +204,7 @@ export function ImpostorRiddleProvider({
   }, [game, player, roomCode, toast]);
 
   const castVote = async (votedPlayerId: string) => {
-    if (!game || !player || game.gameState !== 'voting' || player.votedFor) return;
+    if (!game || !player || !['discussion', 'voting'].includes(game.gameState) || player.votedFor) return;
     await update(ref(db, `impostor-riddles/${roomCode}/players/${player.id}`), { votedFor: votedPlayerId });
   };
   
@@ -254,15 +255,15 @@ export function ImpostorRiddleProvider({
   useEffect(() => {
     if (!game || !player?.isHost) return;
 
-    // Start voting when discussion timer is halfway
-    if (game.gameState === 'discussion' && game.timer <= DISCUSSION_TIME / 2) {
+    // Start voting when discussion timer hits a certain point
+    if (game.gameState === 'discussion' && game.timer <= VOTING_START_TIME) {
       update(ref(db, `impostor-riddles/${roomCode}`), { gameState: 'voting' });
     }
 
     // End game when all votes are in
-    if (game.gameState === 'voting') {
-      const allVoted = game.players.every(p => p.votedFor);
-      if (allVoted && game.players.length > 0) {
+    if (['discussion', 'voting'].includes(game.gameState)) {
+      const allVoted = game.players.length > 0 && game.players.every(p => p.votedFor);
+      if (allVoted) {
         const votes: Record<string, number> = {};
         let impostorId = '';
         game.players.forEach(p => {
