@@ -1,5 +1,3 @@
-'use client';
-
 import { initializeApp } from 'firebase/app';
 import { getDatabase } from 'firebase/database';
 
@@ -13,5 +11,14 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = initializeApp(firebaseConfig);
+// Check if the app is already initialized to prevent errors
+let app;
+try {
+  app = initializeApp(firebaseConfig);
+} catch (e) {
+  // This can happen in development with hot-reloading
+  console.log('Firebase already initialized');
+  app = (global as any)._firebaseApp; // Use existing app instance
+}
+
 export const db = getDatabase(app);
