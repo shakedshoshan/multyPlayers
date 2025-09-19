@@ -190,39 +190,40 @@ export function GameProvider({
     await update(ref(db, `rooms/${roomCode}`), { language: lang });
   }, [game, player, roomCode]);
 
-  const fetchNewCategory = useCallback(async () => {
-    if(!game) return;
+  const fetchNewCategory = useCallback(async (currentGame: Game) => {
     try {
       const successRate =
-        game.round > 1
-          ? game.lastRoundSuccess
+        currentGame.round > 1
+          ? currentGame.lastRoundSuccess
             ? 1
             : 0
           : 0.5;
       const result = await generateCategory({
-        previousCategories: game.previousCategories || [],
+        previousCategories: currentGame.previousCategories || [],
         successRate,
-        language: game.language,
+        language: currentGame.language,
       });
-      await update(ref(db, `rooms/${roomCode}`), { category: result.category });
+      return result.category;
     } catch (error) {
       console.error('Failed to generate category:', error);
-      await update(ref(db, `rooms/${roomCode}`), { category: 'A type of fruit' }); // Fallback
+      return 'A type of fruit'; // Fallback
     }
-  }, [game, roomCode]);
+  }, []);
 
   const startGame = useCallback(async () => {
     if (!game || !player?.isHost || game.gameState !== 'lobby' || game.players.length < 2) {
         return;
     }
 
+    const newCategory = await fetchNewCategory(game);
+
     await update(ref(db, `rooms/${roomCode}`), {
+      category: newCategory,
       gameState: 'playing',
       round: 1,
       timer: ROUND_TIME,
       answers: {},
     });
-    await fetchNewCategory();
   }, [player, game, roomCode, fetchNewCategory]);
 
   const endRound = useCallback(async () => {
@@ -248,17 +249,21 @@ export function GameProvider({
   const nextRound = useCallback(async () => {
     if (!game || !player?.isHost || game.gameState !== 'results') return;
 
+    const updatedGame = {
+      ...game,
+      previousCategories: [...(game.previousCategories || []), game.category],
+    };
+
+    const newCategory = await fetchNewCategory(updatedGame);
+
     await update(ref(db, `rooms/${roomCode}`), {
+      category: newCategory,
       gameState: 'playing',
       round: game.round + 1,
       timer: ROUND_TIME,
       answers: {},
-      previousCategories: [
-        ...(game.previousCategories || []),
-        game.category,
-      ],
+      previousCategories: updatedGame.previousCategories,
     });
-    await fetchNewCategory();
   }, [player, game, roomCode, fetchNewCategory]);
 
   // Timer effect (host only)
@@ -363,5 +368,7 @@ export const useGame = () => {
   }
   return context;
 };
+
+    
 
     
