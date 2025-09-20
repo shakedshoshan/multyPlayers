@@ -57,7 +57,7 @@ const generateSentenceFlow = ai.defineFlow(
   {
     name: 'generateSentenceFlow',
     inputSchema: GenerateSentenceInputSchema,
-    outputSchema: GenerateSONTENTS_HEREutputSchema,
+    outputSchema: GenerateSentenceOutputSchema,
   },
   async input => {
     const {output} = await prompt(input);
