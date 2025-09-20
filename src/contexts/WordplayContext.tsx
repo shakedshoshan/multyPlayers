@@ -219,7 +219,7 @@ export function WordplayProvider({
   }, [game, player, roomCode]);
 
   const parseSentenceTemplate = (template: string): Blank[] => {
-    const blankRegex = /\[(.*?)]/g;
+    const blankRegex = /\[(blank)\]/g;
     const blanks: Blank[] = [];
     let match;
     while ((match = blankRegex.exec(template)) !== null) {
@@ -256,8 +256,6 @@ export function WordplayProvider({
         currentRound: currentGame.currentRound + 1,
         sentences: newSentences.reduce((acc, s, i) => ({ ...acc, [s.id]: s }), {}),
         currentTurnPlayerId: currentGame.players[0].id,
-        currentSentenceIndex: 0,
-        currentBlankIndex: 0,
         votes: {},
         lastRoundWinner: null,
         previousTemplates: updatedPreviousTemplates,
@@ -299,42 +297,33 @@ export function WordplayProvider({
     if (!snapshot.exists()) return;
     
     const currentGame = parseFirebaseState(snapshot.val());
+    const { players, currentTurnPlayerId } = currentGame;
+    let sentences = [...currentGame.sentences];
 
-    const { sentences, players, currentSentenceIndex, currentBlankIndex } = currentGame;
-    const sentence = sentences[currentSentenceIndex];
+    const sentenceToUpdate = sentences.find(s => s.authorId === currentTurnPlayerId);
+    if (!sentenceToUpdate) return;
     
-    sentence.blanks[currentBlankIndex].value = word;
-    sentence.blanks[currentBlankIndex].filledBy = player.id;
-    
+    sentenceToUpdate.blanks[0].value = word;
+    sentenceToUpdate.blanks[0].filledBy = player.id;
+    sentenceToUpdate.isComplete = true;
+
     // Find next turn
-    let nextBlankIndex = currentBlankIndex + 1;
-    let nextSentenceIndex = currentSentenceIndex;
-
-    const currentPlayerIndex = players.findIndex(p => p.id === player.id);
-    const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
-    const nextPlayerId = players[nextPlayerIndex].id;
-
-    if (nextBlankIndex >= sentence.blanks.length) {
-        sentence.isComplete = true;
-        nextBlankIndex = 0;
-        nextSentenceIndex = (currentSentenceIndex + 1);
-
-        if (nextSentenceIndex >= sentences.length) {
-            // All sentences are complete, move to voting
-            await update(gameRef, {
-                sentences: sentences.reduce((acc, s) => ({ ...acc, [s.id]: s }), {}),
-                gameState: 'voting',
-            });
-            return;
-        }
-    }
+    const currentPlayerIndex = players.findIndex(p => p.id === currentTurnPlayerId);
+    const nextPlayerIndex = (currentPlayerIndex + 1);
     
-    await update(gameRef, {
-        sentences: sentences.reduce((acc, s) => ({ ...acc, [s.id]: s }), {}),
-        currentTurnPlayerId: nextPlayerId,
-        currentSentenceIndex: nextSentenceIndex,
-        currentBlankIndex: nextBlankIndex,
-    });
+    if (nextPlayerIndex >= players.length) {
+       // All players have filled their blank for this round, move to voting
+        await update(gameRef, {
+            sentences: sentences.reduce((acc, s) => ({ ...acc, [s.id]: s }), {}),
+            gameState: 'voting',
+        });
+    } else {
+        const nextPlayerId = players[nextPlayerIndex].id;
+        await update(gameRef, {
+            sentences: sentences.reduce((acc, s) => ({ ...acc, [s.id]: s }), {}),
+            currentTurnPlayerId: nextPlayerId,
+        });
+    }
   };
   
   const castVote = async (sentenceId: string) => {

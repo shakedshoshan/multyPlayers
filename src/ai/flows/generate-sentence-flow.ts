@@ -3,7 +3,7 @@
 /**
  * @fileOverview This file defines a Genkit flow for generating sentence templates for the Wordplay game.
  *
- * - generateSentence - Generates a sentence with blanks for parts of speech.
+ * - generateSentence - Generates a sentence with a single blank.
  * - GenerateSentenceInput - The input type for the generateSentence function.
  * - GenerateSentenceOutput - The return type for the generateSentence function.
  */
@@ -22,7 +22,7 @@ export type GenerateSentenceInput = z.infer<typeof GenerateSentenceInputSchema>;
 const GenerateSentenceOutputSchema = z.object({
   template: z
     .string()
-    .describe('A sentence template with placeholders for parts of speech, like "[noun]", "[verb]", "[adjective]", "[adverb]", or "[plural noun]".'),
+    .describe('A sentence template with a single placeholder for a word, like "[blank]".'),
 });
 export type GenerateSentenceOutput = z.infer<typeof GenerateSentenceOutputSchema>;
 
@@ -34,23 +34,19 @@ const prompt = ai.definePrompt({
   name: 'sentenceGenerationPrompt',
   input: {schema: GenerateSentenceInputSchema},
   output: {schema: GenerateSentenceOutputSchema},
-  prompt: `You are a creative game assistant for a word game called Wordplay. Your task is to generate a simple sentence template with blanks for other players to fill in, in the specified language.
+  prompt: `You are a creative game assistant for a word game called Wordplay. Your task is to generate a simple sentence template with a single blank for another player to fill in, in the specified language.
 
-The blanks must be one of the following parts of speech:
-- [noun]
-- [verb]
-- [adjective]
-- [adverb]
-- [plural noun]
+The blank must be represented as: [blank]
 
-The sentence should have between 3 and 5 blanks. The template should be funny, quirky, or interesting to encourage creative and humorous responses.
+The sentence should be funny, quirky, or interesting to encourage creative and humorous responses. It should be a complete sentence with only ONE blank.
 
 Language: {{language}}
 
 Do not repeat any of these previously used templates: {{#if previousTemplates}}{{#each previousTemplates}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}{{else}}None{{/if}}
 
-Example of a good template: "My [adjective] [noun] always [verb]s too [adverb] near the [plural noun]."
-Another good example: "Why did the [noun] [verb] the [adjective] [plural noun]?"
+Example of a good template: "My pet [blank] is an amazing dancer."
+Another good example: "I secretly wish I was a [blank]."
+Another good example: "The quick brown fox jumps over the lazy [blank]."
 
 Please generate a new, unique sentence template.
 `,

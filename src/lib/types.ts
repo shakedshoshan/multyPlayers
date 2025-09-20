@@ -58,7 +58,7 @@ export type WordplayPlayer = {
 
 export type WordplayGameState = 'lobby' | 'writing' | 'voting' | 'results' | 'gameOver';
 
-export type BlankType = 'adjective' | 'noun' | 'verb' | 'adverb' | 'plural noun';
+export type BlankType = 'blank';
 
 export type Blank = {
   type: BlankType;
@@ -68,7 +68,7 @@ export type Blank = {
 
 export type Sentence = {
   id: string; // Unique ID for the sentence, e.g., player ID who it belongs to
-  template: string; // "The [adjective] [noun] [verb]s."
+  template: string; // "The quick brown [blank] jumps over the lazy dog."
   blanks: Blank[];
   isComplete: boolean;
   authorId: string;
@@ -83,10 +83,6 @@ export type WordplayGame = {
   totalRounds: number;
   // Player ID of whose turn it is to fill a blank
   currentTurnPlayerId: string | null; 
-  // Index of the sentence being filled
-  currentSentenceIndex: number; 
-  // Index of the blank being filled
-  currentBlankIndex: number;
   // Record<voterId, sentenceId>
   votes: Record<string, string>; 
   lastRoundWinner: WordplayPlayer | null;

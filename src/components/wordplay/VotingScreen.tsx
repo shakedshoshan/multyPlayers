@@ -1,11 +1,10 @@
 'use client';
 
 import { useWordplay } from '@/contexts/WordplayContext';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
 
 export function VotingScreen() {
   const { game, player, castVote, leaveGame } = useWordplay();
@@ -23,7 +22,7 @@ export function VotingScreen() {
 
   const renderedSentence = (sentence: any) => {
     let partIndex = 0;
-    const parts = sentence.template.split(/(\[.*?\])/).filter(Boolean);
+    const parts = sentence.template.split(/(\[blank\])/g).filter(Boolean);
 
     return (
       <p className="text-xl md:text-2xl font-semibold leading-relaxed">

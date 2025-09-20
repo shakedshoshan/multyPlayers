@@ -1,12 +1,11 @@
 'use client';
 
 import { useWordplay } from '@/contexts/WordplayContext';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Send, ArrowLeft, Loader2 } from 'lucide-react';
 import { FormEvent, useState, useMemo } from 'react';
-import { cn } from '@/lib/utils';
 import { PlayerAvatar } from '../game/PlayerAvatar';
 
 export function WritingScreen() {
@@ -17,13 +16,8 @@ export function WritingScreen() {
 
   const currentSentence = useMemo(() => {
     if (!game) return null;
-    return game.sentences[game.currentSentenceIndex];
+    return game.sentences.find(s => s.authorId === game.currentTurnPlayerId);
   }, [game]);
-
-  const currentBlank = useMemo(() => {
-    if (!currentSentence) return null;
-    return currentSentence.blanks[game.currentBlankIndex];
-  }, [currentSentence, game?.currentBlankIndex]);
 
   const turnPlayer = useMemo(() => {
     if (!game) return null;
@@ -41,38 +35,31 @@ export function WritingScreen() {
   const renderedSentence = useMemo(() => {
     if (!currentSentence) return <p>Loading sentence...</p>;
     
-    let partIndex = 0;
-    const parts = currentSentence.template.split(/(\[.*?\])/).filter(Boolean);
+    const parts = currentSentence.template.split(/(\[blank\])/g).filter(Boolean);
 
     return (
       <p className="text-2xl md:text-3xl font-semibold leading-relaxed text-center">
         {parts.map((part, index) => {
-          if (part.startsWith('[') && part.endsWith(']')) {
-            const blank = currentSentence.blanks[partIndex];
-            const isCurrentBlank = partIndex === game?.currentBlankIndex;
-            partIndex++;
-            if (blank.value) {
-              return <span key={index} className="text-primary font-bold underline decoration-wavy underline-offset-4">{blank.value}</span>
-            }
-            if (isCurrentBlank) {
-               return <span key={index} className="font-bold text-accent animate-pulse">[{blank.type}]</span>
-            }
-            return <span key={index} className="font-bold text-muted-foreground">[{blank.type}]</span>
+          if (part === '[blank]') {
+             if (isMyTurn) {
+                return <span key={index} className="font-bold text-primary underline decoration-wavy underline-offset-4 animate-pulse">______</span>
+             }
+             return <span key={index} className="font-bold text-muted-foreground">______</span>
           }
           return <span key={index}>{part}</span>
         })}
       </p>
     )
-  }, [currentSentence, game?.currentBlankIndex]);
+  }, [currentSentence, isMyTurn]);
 
-  if (!game || !player || !currentSentence || !currentBlank || !turnPlayer) {
+  if (!game || !player || !currentSentence || !turnPlayer) {
     return <Loader2 className="animate-spin" />;
   }
 
   return (
     <div className="w-full max-w-3xl mx-auto flex flex-col gap-6 animate-in fade-in-0 zoom-in-95">
       <header className="text-center">
-        <p className="text-sm text-muted-foreground">Round {game.round}</p>
+        <p className="text-sm text-muted-foreground">Round {game.currentRound} of {game.totalRounds}</p>
         <div className='flex items-center justify-center gap-2 mt-2'>
            <PlayerAvatar player={{...turnPlayer, score: 0, isBot: false}} size="sm" />
            <p className="text-lg font-bold">
@@ -80,7 +67,7 @@ export function WritingScreen() {
             </p>
         </div>
         <p className="text-muted-foreground mt-1">
-            Fill in the blank for the <span className='font-bold text-primary'>[{currentBlank.type}]</span>
+            Fill in the blank!
         </p>
       </header>
 
@@ -94,12 +81,12 @@ export function WritingScreen() {
                 <div className="flex w-full items-center space-x-2">
                     <Input
                       type="text"
-                      placeholder={`Enter a ${currentBlank.type}...`}
+                      placeholder="Enter a word..."
                       value={word}
                       onChange={(e) => setWord(e.target.value)}
                       disabled={!isMyTurn}
                       className="text-lg h-12"
-                      aria-label={`Enter a ${currentBlank.type}`}
+                      aria-label="Enter a word to fill the blank"
                     />
                     <Button
                       type="submit"

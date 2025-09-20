@@ -24,8 +24,6 @@ export async function createWordplayRoomAction(): Promise<string> {
     currentRound: 0,
     totalRounds: 5, // Default rounds
     currentTurnPlayerId: null,
-    currentSentenceIndex: 0,
-    currentBlankIndex: 0,
     votes: {},
     lastRoundWinner: null,
     previousTemplates: [],
