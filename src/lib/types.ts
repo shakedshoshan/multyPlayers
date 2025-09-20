@@ -47,3 +47,35 @@ export type RiddleGame = {
     winner: 'knowers' | 'impostor' | null;
     previousWords: string[];
 };
+
+// Types for Wordplay
+export type WordplayPlayer = {
+  id: string;
+  name: string;
+  isHost: boolean;
+  score: number;
+};
+
+export type WordplayGameState = 'lobby' | 'writing' | 'voting' | 'results';
+
+export type Blank = {
+  type: 'adjective' | 'noun' | 'verb' | 'adverb' | 'plural noun';
+  value: string;
+  filledBy: string | null; // Player ID
+};
+
+export type Sentence = {
+  template: string; // "The [adjective] [noun] [verb]s."
+  blanks: Blank[];
+  isComplete: boolean;
+};
+
+export type WordplayGame = {
+  roomCode: string;
+  players: WordplayPlayer[];
+  gameState: WordplayGameState;
+  sentences: Sentence[]; // One per player
+  currentRound: number;
+  currentTurnPlayerId: string | null; // Player ID of whose turn it is
+  votes: Record<string, string>; // Voter ID -> Voted-for Player ID
+};

@@ -23,6 +23,12 @@ const games = [
     href: '/impostors-riddle',
     icon: '🕵️',
   },
+  {
+    title: 'Wordplay',
+    description: 'A creative multiplayer game where players team up to craft hilariously absurd sentences.',
+    href: '/wordplay',
+    icon: '✏️',
+  },
 ];
 
 export function MainMenu() {
