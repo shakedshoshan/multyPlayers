@@ -1,6 +1,6 @@
 # Game Hub
 
-Game Hub is a collection of real-time multiplayer games powered by AI.
+Game Hub is a collection of real-time multiplayer games.
 
 ## ✨ Games
 
