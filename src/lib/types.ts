@@ -87,8 +87,8 @@ export type WordplayGame = {
   currentSentenceIndex: number; 
   // Index of the blank being filled
   currentBlankIndex: number;
-  // Record<sentenceId, Record<voterId, 1>>
-  votes: Record<string, Record<string, number>>; 
+  // Record<voterId, sentenceId>
+  votes: Record<string, string>; 
   lastRoundWinner: WordplayPlayer | null;
   previousTemplates: string[];
   language: string;

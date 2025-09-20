@@ -254,7 +254,7 @@ export function WordplayProvider({
       await update(ref(db, `wordplay/${roomCode}`), {
         gameState: 'writing',
         currentRound: currentGame.currentRound + 1,
-        sentences: newSentences.reduce((acc, s, i) => ({ ...acc, [i]: s }), {}),
+        sentences: newSentences.reduce((acc, s, i) => ({ ...acc, [s.id]: s }), {}),
         currentTurnPlayerId: currentGame.players[0].id,
         currentSentenceIndex: 0,
         currentBlankIndex: 0,
@@ -310,38 +310,38 @@ export function WordplayProvider({
     let nextBlankIndex = currentBlankIndex + 1;
     let nextSentenceIndex = currentSentenceIndex;
 
+    const currentPlayerIndex = players.findIndex(p => p.id === player.id);
+    const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
+    const nextPlayerId = players[nextPlayerIndex].id;
+
     if (nextBlankIndex >= sentence.blanks.length) {
         sentence.isComplete = true;
         nextBlankIndex = 0;
-        nextSentenceIndex = (currentSentenceIndex + 1) % sentences.length;
+        nextSentenceIndex = (currentSentenceIndex + 1);
+
+        if (nextSentenceIndex >= sentences.length) {
+            // All sentences are complete, move to voting
+            await update(gameRef, {
+                sentences: sentences.reduce((acc, s) => ({ ...acc, [s.id]: s }), {}),
+                gameState: 'voting',
+            });
+            return;
+        }
     }
     
-    const allSentencesComplete = sentences.every(s => s.isComplete);
-    
-    if (allSentencesComplete) {
-      await update(gameRef, {
-        sentences: sentences.reduce((acc, s, i) => ({ ...acc, [i]: s }), {}),
-        gameState: 'voting',
-      });
-    } else {
-      const currentPlayerIndex = players.findIndex(p => p.id === player.id);
-      const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
-      const nextPlayerId = players[nextPlayerIndex].id;
-
-      await update(gameRef, {
-        sentences: sentences.reduce((acc, s, i) => ({ ...acc, [i]: s }), {}),
+    await update(gameRef, {
+        sentences: sentences.reduce((acc, s) => ({ ...acc, [s.id]: s }), {}),
         currentTurnPlayerId: nextPlayerId,
         currentSentenceIndex: nextSentenceIndex,
         currentBlankIndex: nextBlankIndex,
-      });
-    }
+    });
   };
   
   const castVote = async (sentenceId: string) => {
     if (!game || !player || game.gameState !== 'voting') return;
     
-    const voteRef = ref(db, `wordplay/${roomCode}/votes/${sentenceId}/${player.id}`);
-    await set(voteRef, 1);
+    const voteRef = ref(db, `wordplay/${roomCode}/votes/${player.id}`);
+    await set(voteRef, sentenceId);
   };
   
   const nextRound = async () => {
@@ -358,16 +358,16 @@ export function WordplayProvider({
     if (!game || !player?.isHost) return;
 
     if (game.gameState === 'voting') {
-      const totalVotes = Object.values(game.votes).reduce((sum, sentenceVotes) => sum + Object.keys(sentenceVotes).length, 0);
+      const allPlayersVoted = game.players.length === Object.keys(game.votes).length;
       
-      if (totalVotes === game.players.length) {
-        const voteCounts = Object.entries(game.votes).map(([sentenceId, voters]) => ({
-            sentenceId,
-            count: Object.keys(voters).length,
-        }));
+      if (allPlayersVoted) {
+        const voteCounts: Record<string, number> = {};
+        Object.values(game.votes).forEach(sentenceId => {
+            voteCounts[sentenceId] = (voteCounts[sentenceId] || 0) + 1;
+        });
         
-        voteCounts.sort((a,b) => b.count - a.count);
-        const winningSentenceId = voteCounts[0].sentenceId;
+        const sortedVotes = Object.entries(voteCounts).sort((a,b) => b[1] - a[1]);
+        const winningSentenceId = sortedVotes[0][0];
         const winningSentence = game.sentences.find(s => s.id === winningSentenceId);
         
         if (winningSentence) {

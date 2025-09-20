@@ -9,18 +9,17 @@ import { useState } from 'react';
 
 export function VotingScreen() {
   const { game, player, castVote, leaveGame } = useWordplay();
-  const [votedFor, setVotedFor] = useState<string | null>(null);
+
+  if (!game || !player) return <Loader2 className="animate-spin" />;
+
+  const playerHasVoted = player.id in game.votes;
+  const votedForId = playerHasVoted ? game.votes[player.id] : null;
 
   const handleVote = (sentenceId: string) => {
-    if (!votedFor) {
-      setVotedFor(sentenceId);
+    if (!playerHasVoted) {
       castVote(sentenceId);
     }
   };
-
-  const hasVoted = !!votedFor;
-
-  if (!game || !player) return <Loader2 className="animate-spin" />;
 
   const renderedSentence = (sentence: any) => {
     let partIndex = 0;
@@ -49,7 +48,7 @@ export function VotingScreen() {
 
       <main className="grid md:grid-cols-2 gap-6">
         {game.sentences.map(sentence => (
-            <Card key={sentence.id} className={cn("flex flex-col justify-between transition-all", votedFor === sentence.id && "ring-4 ring-primary shadow-lg scale-105")}>
+            <Card key={sentence.id} className={cn("flex flex-col justify-between transition-all", votedForId === sentence.id && "ring-4 ring-primary shadow-lg scale-105")}>
                 <CardContent className="p-6">
                     {renderedSentence(sentence)}
                 </CardContent>
@@ -57,10 +56,10 @@ export function VotingScreen() {
                     <Button 
                         className="w-full" 
                         onClick={() => handleVote(sentence.id)}
-                        disabled={hasVoted || sentence.authorId === player.id}
-                        variant={votedFor === sentence.id ? 'secondary' : 'default'}
+                        disabled={playerHasVoted || sentence.authorId === player.id}
+                        variant={votedForId === sentence.id ? 'secondary' : 'default'}
                     >
-                       {votedFor === sentence.id ? <><Check className="mr-2"/> Voted</> : 'Vote for this!'}
+                       {votedForId === sentence.id ? <><Check className="mr-2"/> Voted</> : 'Vote for this!'}
                     </Button>
                 </CardFooter>
             </Card>
@@ -68,7 +67,7 @@ export function VotingScreen() {
       </main>
 
        <footer className="text-center mt-4">
-            {hasVoted ? (
+            {playerHasVoted ? (
                 <p className="text-green-500 font-semibold">Thanks for voting! Waiting for others...</p>
             ) : (
                  <p className="text-primary font-semibold">You can't vote for your own sentence.</p>
