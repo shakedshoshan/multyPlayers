@@ -81,6 +81,7 @@ export type WordplayGame = {
   sentences: Sentence[];
   currentRound: number;
   totalRounds: number;
+  timer: number;
   // Record<voterId, sentenceId>
   votes: Record<string, string>; 
   lastRoundWinner: WordplayPlayer | null;

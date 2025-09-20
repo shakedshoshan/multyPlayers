@@ -6,6 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Send, ArrowLeft, Loader2, Check } from 'lucide-react';
 import { FormEvent, useState, useMemo } from 'react';
+import { Progress } from '../ui/progress';
+
+const ROUND_TIME = 40;
 
 export function WritingScreen() {
   const { game, player, submitWord, leaveGame } = useWordplay();
@@ -49,6 +52,7 @@ export function WritingScreen() {
     return <Loader2 className="animate-spin" />;
   }
 
+  const timerPercentage = game.timer > 0 ? (game.timer / ROUND_TIME) * 100 : 0;
   const waitingCount = game.players.length - game.sentences.filter(s => s.isComplete).length;
 
   return (
@@ -70,39 +74,48 @@ export function WritingScreen() {
           <div className="min-h-[8rem] flex items-center justify-center">
             {renderedSentence}
           </div>
-
-          <form onSubmit={handleSubmit} className="w-full max-w-md">
-            <div className="flex w-full items-center space-x-2">
-              <Input
-                type="text"
-                placeholder="Enter your word..."
-                value={word}
-                onChange={(e) => setWord(e.target.value)}
-                disabled={hasSubmitted || isSubmitting}
-                className="text-lg h-12"
-                aria-label="Enter a word to fill the blank"
-              />
-              <Button
-                type="submit"
-                size="icon"
-                className="h-12 w-12 shrink-0"
-                disabled={hasSubmitted || isSubmitting || !word.trim()}
-              >
-                {hasSubmitted ? (
-                  <Check className="h-6 w-6" />
-                ) : isSubmitting ? (
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                ) : (
-                  <Send className="h-6 w-6" />
-                )}
-              </Button>
+          
+           <div className="w-full max-w-md">
+            <div className="flex items-center gap-4 mb-4">
+                <Progress value={timerPercentage} className="h-3" />
+                <p className="text-3xl font-mono font-bold w-16 text-right">
+                    {game.timer}
+                </p>
             </div>
-            {hasSubmitted && (
-              <p className="mt-4 text-green-500 font-semibold text-center">
-                Your word is in! Waiting for {waitingCount} more player{waitingCount === 1 ? '' : 's'}...
-              </p>
-            )}
-          </form>
+
+            <form onSubmit={handleSubmit} className="w-full">
+                <div className="flex w-full items-center space-x-2">
+                <Input
+                    type="text"
+                    placeholder="Enter your word..."
+                    value={word}
+                    onChange={(e) => setWord(e.target.value)}
+                    disabled={hasSubmitted || isSubmitting}
+                    className="text-lg h-12"
+                    aria-label="Enter a word to fill the blank"
+                />
+                <Button
+                    type="submit"
+                    size="icon"
+                    className="h-12 w-12 shrink-0"
+                    disabled={hasSubmitted || isSubmitting || !word.trim()}
+                >
+                    {hasSubmitted ? (
+                    <Check className="h-6 w-6" />
+                    ) : isSubmitting ? (
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    ) : (
+                    <Send className="h-6 w-6" />
+                    )}
+                </Button>
+                </div>
+                {hasSubmitted && (
+                <p className="mt-4 text-green-500 font-semibold text-center">
+                    Your word is in! Waiting for {waitingCount} more player{waitingCount === 1 ? '' : 's'}...
+                </p>
+                )}
+            </form>
+          </div>
         </CardContent>
         <CardFooter className="flex justify-center pb-6">
           <Button variant="ghost" onClick={leaveGame}>

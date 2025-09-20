@@ -28,6 +28,8 @@ import { generateSentence } from '@/ai/flows/generate-sentence-flow';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 
+const ROUND_TIME = 40;
+
 const createPlayer = (
   id: string,
   name: string,
@@ -248,6 +250,7 @@ export function WordplayProvider({
       await update(ref(db, `wordplay/${roomCode}`), {
         gameState: 'writing',
         currentRound: currentGame.currentRound + 1,
+        timer: ROUND_TIME,
         sentences: newSentences.reduce((acc, s) => ({ ...acc, [s.id]: s }), {}),
         votes: {},
         lastRoundWinner: null,
@@ -304,15 +307,54 @@ export function WordplayProvider({
     }
   };
   
+  const finishWriting = useCallback(async () => {
+    const gameRef = ref(db, `wordplay/${roomCode}`);
+    const snapshot = await get(gameRef);
+    if (!snapshot.exists() || snapshot.val().gameState !== 'writing') return;
+
+    await update(gameRef, {
+      gameState: 'voting',
+      timer: 0,
+    });
+  }, [roomCode]);
+
+  // Timer effect (host only)
+  useEffect(() => {
+    if (player?.isHost && game?.gameState === 'writing' && game.timer > 0) {
+      const interval = setInterval(async () => {
+        const gameRef = ref(db, `wordplay/${roomCode}`);
+        const snapshot = await get(gameRef);
+        if (!snapshot.exists()) {
+            clearInterval(interval);
+            return;
+        }
+        const currentTimer = snapshot.val().timer;
+        if(currentTimer > 0) {
+            await update(gameRef, { timer: currentTimer - 1 });
+        } else {
+            clearInterval(interval);
+            finishWriting();
+        }
+      }, 1000);
+      return () => clearInterval(interval);
+    } else if (
+      player?.isHost &&
+      game?.gameState === 'writing' &&
+      game.timer <= 0
+    ) {
+      finishWriting();
+    }
+  }, [game?.gameState, game?.timer, player?.isHost, roomCode, finishWriting]);
+  
   // Game state transitions (host only)
   useEffect(() => {
     if (!game || !player?.isHost) return;
 
     // Check if all players have submitted their words
     if (game.gameState === 'writing') {
-        const allWordsSubmitted = game.sentences.length === game.players.length && game.sentences.every(s => s.isComplete);
+        const allWordsSubmitted = game.sentences.length > 0 && game.sentences.length === game.players.length && game.sentences.every(s => s.isComplete);
         if (allWordsSubmitted) {
-            update(ref(db, `wordplay/${roomCode}`), { gameState: 'voting' });
+            finishWriting();
         }
     }
     
@@ -323,7 +365,9 @@ export function WordplayProvider({
       if (allPlayersVoted) {
         const voteCounts: Record<string, number> = {};
         Object.values(game.votes).forEach(sentenceId => {
-            voteCounts[sentenceId] = (voteCounts[sentenceId] || 0) + 1;
+            if(sentenceId) {
+                voteCounts[sentenceId] = (voteCounts[sentenceId] || 0) + 1;
+            }
         });
         
         // Find the sentenceId with the most votes
@@ -358,7 +402,7 @@ export function WordplayProvider({
         }
       }
     }
-  }, [game, player, roomCode]);
+  }, [game, player, roomCode, finishWriting]);
 
   const value = {
     game,
