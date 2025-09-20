@@ -23,7 +23,6 @@ import type {
   WordplayPlayer,
   Sentence,
   Blank,
-  BlankType,
 } from '@/lib/types';
 import { generateSentence } from '@/ai/flows/generate-sentence-flow';
 import { useToast } from '@/hooks/use-toast';
@@ -219,17 +218,11 @@ export function WordplayProvider({
   }, [game, player, roomCode]);
 
   const parseSentenceTemplate = (template: string): Blank[] => {
-    const blankRegex = /\[(blank)\]/g;
-    const blanks: Blank[] = [];
-    let match;
-    while ((match = blankRegex.exec(template)) !== null) {
-      blanks.push({
-        type: match[1] as BlankType,
-        value: '',
-        filledBy: null,
-      });
-    }
-    return blanks;
+    return [{
+      type: 'blank',
+      value: '',
+      filledBy: null,
+    }];
   };
 
 
@@ -239,23 +232,23 @@ export function WordplayProvider({
       const previousTemplates = currentGame.previousTemplates || [];
       const updatedPreviousTemplates = [...previousTemplates];
 
-      for (const p of currentGame.players) {
+      // Use Promise.all to fetch sentences concurrently
+      await Promise.all(currentGame.players.map(async (p) => {
          const { template } = await generateSentence({ previousTemplates: updatedPreviousTemplates, language: currentGame.language });
          newSentences.push({
-            id: p.id,
+            id: p.id, // Use player id as sentence id for easy lookup
             template,
             blanks: parseSentenceTemplate(template),
             isComplete: false,
             authorId: p.id,
          });
          updatedPreviousTemplates.push(template);
-      }
+      }));
 
       await update(ref(db, `wordplay/${roomCode}`), {
         gameState: 'writing',
         currentRound: currentGame.currentRound + 1,
-        sentences: newSentences.reduce((acc, s, i) => ({ ...acc, [s.id]: s }), {}),
-        currentTurnPlayerId: currentGame.players[0].id,
+        sentences: newSentences.reduce((acc, s) => ({ ...acc, [s.id]: s }), {}),
         votes: {},
         lastRoundWinner: null,
         previousTemplates: updatedPreviousTemplates,
@@ -284,46 +277,15 @@ export function WordplayProvider({
   }, [game, player, startNewRound, toast]);
   
   const submitWord = async (word: string) => {
-    if (
-      !game ||
-      !player ||
-      game.gameState !== 'writing' ||
-      game.currentTurnPlayerId !== player.id
-    )
-      return;
+    if (!game || !player || game.gameState !== 'writing') return;
 
-    const gameRef = ref(db, `wordplay/${roomCode}`);
-    const snapshot = await get(gameRef);
-    if (!snapshot.exists()) return;
+    const sentenceRef = ref(db, `wordplay/${roomCode}/sentences/${player.id}`);
     
-    const currentGame = parseFirebaseState(snapshot.val());
-    const { players, currentTurnPlayerId } = currentGame;
-    let sentences = [...currentGame.sentences];
-
-    const sentenceToUpdate = sentences.find(s => s.authorId === currentTurnPlayerId);
-    if (!sentenceToUpdate) return;
-    
-    sentenceToUpdate.blanks[0].value = word;
-    sentenceToUpdate.blanks[0].filledBy = player.id;
-    sentenceToUpdate.isComplete = true;
-
-    // Find next turn
-    const currentPlayerIndex = players.findIndex(p => p.id === currentTurnPlayerId);
-    const nextPlayerIndex = (currentPlayerIndex + 1);
-    
-    if (nextPlayerIndex >= players.length) {
-       // All players have filled their blank for this round, move to voting
-        await update(gameRef, {
-            sentences: sentences.reduce((acc, s) => ({ ...acc, [s.id]: s }), {}),
-            gameState: 'voting',
-        });
-    } else {
-        const nextPlayerId = players[nextPlayerIndex].id;
-        await update(gameRef, {
-            sentences: sentences.reduce((acc, s) => ({ ...acc, [s.id]: s }), {}),
-            currentTurnPlayerId: nextPlayerId,
-        });
-    }
+    await update(sentenceRef, {
+      'blanks/0/value': word,
+      'blanks/0/filledBy': player.id,
+      isComplete: true,
+    });
   };
   
   const castVote = async (sentenceId: string) => {
@@ -346,6 +308,15 @@ export function WordplayProvider({
   useEffect(() => {
     if (!game || !player?.isHost) return;
 
+    // Check if all players have submitted their words
+    if (game.gameState === 'writing') {
+        const allWordsSubmitted = game.sentences.length === game.players.length && game.sentences.every(s => s.isComplete);
+        if (allWordsSubmitted) {
+            update(ref(db, `wordplay/${roomCode}`), { gameState: 'voting' });
+        }
+    }
+    
+    // Check if all players have voted
     if (game.gameState === 'voting') {
       const allPlayersVoted = game.players.length === Object.keys(game.votes).length;
       
@@ -355,25 +326,35 @@ export function WordplayProvider({
             voteCounts[sentenceId] = (voteCounts[sentenceId] || 0) + 1;
         });
         
+        // Find the sentenceId with the most votes
         const sortedVotes = Object.entries(voteCounts).sort((a,b) => b[1] - a[1]);
-        const winningSentenceId = sortedVotes[0][0];
-        const winningSentence = game.sentences.find(s => s.id === winningSentenceId);
+        const winningSentenceId = sortedVotes.length > 0 ? sortedVotes[0][0] : null;
         
-        if (winningSentence) {
-            const winner = game.players.find(p => p.id === winningSentence.authorId);
+        if (winningSentenceId) {
+            const winningSentence = game.sentences.find(s => s.id === winningSentenceId);
+            const winner = winningSentence ? game.players.find(p => p.id === winningSentence.authorId) : null;
+            
             if (winner) {
-                const updatedWinner = { ...winner, score: winner.score + 1 };
-                const playerUpdates: {[key: string]: any} = {};
-                game.players.forEach(p => {
-                    playerUpdates[p.id] = p.id === winner.id ? updatedWinner : p;
-                });
-                
-                update(ref(db, `wordplay/${roomCode}`), {
-                  gameState: 'results',
-                  lastRoundWinner: updatedWinner,
-                  players: playerUpdates
+                const playerRef = ref(db, `wordplay/${roomCode}/players/${winner.id}`);
+                get(playerRef).then(snapshot => {
+                    const currentScore = snapshot.val().score || 0;
+                    const newScore = currentScore + 1;
+                    const updatedWinner = { ...winner, score: newScore };
+
+                    update(playerRef, { score: newScore }).then(() => {
+                         update(ref(db, `wordplay/${roomCode}`), {
+                            gameState: 'results',
+                            lastRoundWinner: updatedWinner,
+                        });
+                    });
                 });
             }
+        } else {
+            // Handle case with no votes or a tie (for now, just move on)
+             update(ref(db, `wordplay/${roomCode}`), {
+                gameState: 'results',
+                lastRoundWinner: null, // No winner if no votes
+            });
         }
       }
     }

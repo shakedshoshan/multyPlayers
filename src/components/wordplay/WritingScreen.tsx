@@ -4,112 +4,112 @@ import { useWordplay } from '@/contexts/WordplayContext';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Send, ArrowLeft, Loader2 } from 'lucide-react';
+import { Send, ArrowLeft, Loader2, Check } from 'lucide-react';
 import { FormEvent, useState, useMemo } from 'react';
-import { PlayerAvatar } from '../game/PlayerAvatar';
 
 export function WritingScreen() {
   const { game, player, submitWord, leaveGame } = useWordplay();
   const [word, setWord] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isMyTurn = game?.currentTurnPlayerId === player?.id;
+  const mySentence = useMemo(() => {
+    if (!game || !player) return null;
+    return game.sentences.find((s) => s.authorId === player.id);
+  }, [game, player]);
 
-  const currentSentence = useMemo(() => {
-    if (!game) return null;
-    return game.sentences.find(s => s.authorId === game.currentTurnPlayerId);
-  }, [game]);
-
-  const turnPlayer = useMemo(() => {
-    if (!game) return null;
-    return game.players.find(p => p.id === game.currentTurnPlayerId);
-  }, [game]);
+  const hasSubmitted = useMemo(() => {
+    if (!mySentence) return false;
+    return mySentence.blanks[0]?.value !== '';
+  }, [mySentence]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (word.trim() && isMyTurn) {
+    if (word.trim() && !hasSubmitted) {
+      setIsSubmitting(true);
       submitWord(word.trim());
-      setWord('');
     }
   };
-  
-  const renderedSentence = useMemo(() => {
-    if (!currentSentence) return <p>Loading sentence...</p>;
-    
-    const parts = currentSentence.template.split(/(\[blank\])/g).filter(Boolean);
 
+  const renderedSentence = useMemo(() => {
+    if (!mySentence) return <p>Loading your sentence...</p>;
+
+    const parts = mySentence.template.split('[blank]');
     return (
       <p className="text-2xl md:text-3xl font-semibold leading-relaxed text-center">
-        {parts.map((part, index) => {
-          if (part === '[blank]') {
-             if (isMyTurn) {
-                return <span key={index} className="font-bold text-primary underline decoration-wavy underline-offset-4 animate-pulse">______</span>
-             }
-             return <span key={index} className="font-bold text-muted-foreground">______</span>
-          }
-          return <span key={index}>{part}</span>
-        })}
+        {parts[0]}
+        <span className="font-bold text-primary underline decoration-wavy underline-offset-4 px-2">
+          {hasSubmitted ? mySentence.blanks[0].value : '______'}
+        </span>
+        {parts[1]}
       </p>
-    )
-  }, [currentSentence, isMyTurn]);
-
-  if (!game || !player || !currentSentence || !turnPlayer) {
+    );
+  }, [mySentence, hasSubmitted]);
+  
+  if (!game || !player) {
     return <Loader2 className="animate-spin" />;
   }
+
+  const waitingCount = game.players.length - game.sentences.filter(s => s.isComplete).length;
 
   return (
     <div className="w-full max-w-3xl mx-auto flex flex-col gap-6 animate-in fade-in-0 zoom-in-95">
       <header className="text-center">
-        <p className="text-sm text-muted-foreground">Round {game.currentRound} of {game.totalRounds}</p>
-        <div className='flex items-center justify-center gap-2 mt-2'>
-           <PlayerAvatar player={{...turnPlayer, score: 0, isBot: false}} size="sm" />
-           <p className="text-lg font-bold">
-            {isMyTurn ? "Your Turn!" : `${turnPlayer.name}'s Turn`}
-            </p>
-        </div>
+        <p className="text-sm text-muted-foreground">
+          Round {game.currentRound} of {game.totalRounds}
+        </p>
+        <h1 className="text-4xl font-extrabold tracking-tighter mt-2">
+          Fill in the Blank!
+        </h1>
         <p className="text-muted-foreground mt-1">
-            Fill in the blank!
+          Unleash your creativity. The funnier, the better!
         </p>
       </header>
 
       <Card className="shadow-lg">
         <CardContent className="p-6 md:p-10 flex flex-col items-center gap-8">
-            <div className="min-h-[8rem] flex items-center justify-center">
-                {renderedSentence}
-            </div>
+          <div className="min-h-[8rem] flex items-center justify-center">
+            {renderedSentence}
+          </div>
 
-            <form onSubmit={handleSubmit} className="w-full max-w-md">
-                <div className="flex w-full items-center space-x-2">
-                    <Input
-                      type="text"
-                      placeholder="Enter a word..."
-                      value={word}
-                      onChange={(e) => setWord(e.target.value)}
-                      disabled={!isMyTurn}
-                      className="text-lg h-12"
-                      aria-label="Enter a word to fill the blank"
-                    />
-                    <Button
-                      type="submit"
-                      size="icon"
-                      className="h-12 w-12 shrink-0"
-                      disabled={!isMyTurn || !word.trim()}
-                    >
-                      <Send className="h-6 w-6" />
-                    </Button>
-              </div>
-               {!isMyTurn && (
-                <p className="mt-4 text-primary font-semibold text-center">
-                  Waiting for {turnPlayer.name} to submit a word...
-                </p>
-              )}
-            </form>
+          <form onSubmit={handleSubmit} className="w-full max-w-md">
+            <div className="flex w-full items-center space-x-2">
+              <Input
+                type="text"
+                placeholder="Enter your word..."
+                value={word}
+                onChange={(e) => setWord(e.target.value)}
+                disabled={hasSubmitted || isSubmitting}
+                className="text-lg h-12"
+                aria-label="Enter a word to fill the blank"
+              />
+              <Button
+                type="submit"
+                size="icon"
+                className="h-12 w-12 shrink-0"
+                disabled={hasSubmitted || isSubmitting || !word.trim()}
+              >
+                {hasSubmitted ? (
+                  <Check className="h-6 w-6" />
+                ) : isSubmitting ? (
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                ) : (
+                  <Send className="h-6 w-6" />
+                )}
+              </Button>
+            </div>
+            {hasSubmitted && (
+              <p className="mt-4 text-green-500 font-semibold text-center">
+                Your word is in! Waiting for {waitingCount} more player{waitingCount === 1 ? '' : 's'}...
+              </p>
+            )}
+          </form>
         </CardContent>
         <CardFooter className="flex justify-center pb-6">
-            <Button variant="ghost" onClick={leaveGame}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Leave Game
-            </Button>
-          </CardFooter>
+          <Button variant="ghost" onClick={leaveGame}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Leave Game
+          </Button>
+        </CardFooter>
       </Card>
     </div>
   );

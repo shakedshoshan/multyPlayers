@@ -81,8 +81,6 @@ export type WordplayGame = {
   sentences: Sentence[];
   currentRound: number;
   totalRounds: number;
-  // Player ID of whose turn it is to fill a blank
-  currentTurnPlayerId: string | null; 
   // Record<voterId, sentenceId>
   votes: Record<string, string>; 
   lastRoundWinner: WordplayPlayer | null;
