@@ -111,7 +111,7 @@ export function ImpostorRiddleProvider({
     }
     
     setPlayer(null);
-    router.push('/impostors-riddle');
+    router.push('/');
   }, [player, game, roomCode, router]);
 
   const joinGame = useCallback(

@@ -69,7 +69,7 @@ export function GameProvider({
         if (player && !players.some((p: Player) => p.id === player.id)) {
           // Player was removed from the game (e.g. kicked, or data reset)
           setPlayer(null); 
-          router.push(`/game/${roomCode}`);
+          router.push(`/synapsesync`);
         }
         
         setGame(transformedData);
@@ -373,3 +373,4 @@ export const useGame = () => {
     
 
     
+

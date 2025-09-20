@@ -139,7 +139,7 @@ export function WordplayProvider({
     }
 
     setPlayer(null);
-    router.push('/wordplay');
+    router.push('/');
   }, [player, game, roomCode, router]);
 
   const joinGame = useCallback(

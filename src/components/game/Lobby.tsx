@@ -142,7 +142,7 @@ export function Lobby() {
       <CardFooter className="flex justify-center">
         <Button variant="ghost" onClick={leaveGame}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Home
+          Back to Main Menu
         </Button>
       </CardFooter>
     </Card>
