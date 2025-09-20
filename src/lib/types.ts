@@ -43,7 +43,6 @@ export type RiddleGame = {
     category: string;
     secretWord: string;
     timer: number; // 10 minutes = 600 seconds
-    votes: Record<string, string>; // Voter ID -> Voted Player ID
     winner: 'knowers' | 'impostor' | null;
     previousWords: string[];
 };
@@ -58,24 +57,36 @@ export type WordplayPlayer = {
 
 export type WordplayGameState = 'lobby' | 'writing' | 'voting' | 'results';
 
+export type BlankType = 'adjective' | 'noun' | 'verb' | 'adverb' | 'plural noun';
+
 export type Blank = {
-  type: 'adjective' | 'noun' | 'verb' | 'adverb' | 'plural noun';
-  value: string;
+  type: BlankType;
+  value: string; // The word filled in by a player
   filledBy: string | null; // Player ID
 };
 
 export type Sentence = {
+  id: string; // Unique ID for the sentence, e.g., player ID who it belongs to
   template: string; // "The [adjective] [noun] [verb]s."
   blanks: Blank[];
   isComplete: boolean;
+  authorId: string;
 };
 
 export type WordplayGame = {
   roomCode: string;
   players: WordplayPlayer[];
   gameState: WordplayGameState;
-  sentences: Sentence[]; // One per player
+  sentences: Sentence[];
   currentRound: number;
-  currentTurnPlayerId: string | null; // Player ID of whose turn it is
-  votes: Record<string, string>; // Voter ID -> Voted-for Player ID
+  // Player ID of whose turn it is to fill a blank
+  currentTurnPlayerId: string | null; 
+  // Index of the sentence being filled
+  currentSentenceIndex: number; 
+  // Index of the blank being filled
+  currentBlankIndex: number;
+  // Record<sentenceId, Record<voterId, 1>>
+  votes: Record<string, Record<string, number>>; 
+  lastRoundWinner: WordplayPlayer | null;
+  previousTemplates: string[];
 };
