@@ -28,6 +28,7 @@ export async function createWordplayRoomAction(): Promise<string> {
     votes: {},
     lastRoundWinner: null,
     previousTemplates: [],
+    language: 'en',
   };
 
   const gameRef = ref(db, `wordplay/${roomCode}`);

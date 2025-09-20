@@ -15,6 +15,7 @@ const GenerateSentenceInputSchema = z.object({
   previousTemplates: z
     .array(z.string())
     .describe('An array of previously used sentence templates to avoid repetition.'),
+  language: z.string().describe('The language for the category. Should be a two-letter ISO 639-1 code.'),
 });
 export type GenerateSentenceInput = z.infer<typeof GenerateSentenceInputSchema>;
 
@@ -33,7 +34,7 @@ const prompt = ai.definePrompt({
   name: 'sentenceGenerationPrompt',
   input: {schema: GenerateSentenceInputSchema},
   output: {schema: GenerateSentenceOutputSchema},
-  prompt: `You are a creative game assistant for a word game called Wordplay. Your task is to generate a simple sentence template with blanks for other players to fill in.
+  prompt: `You are a creative game assistant for a word game called Wordplay. Your task is to generate a simple sentence template with blanks for other players to fill in, in the specified language.
 
 The blanks must be one of the following parts of speech:
 - [noun]
@@ -43,6 +44,8 @@ The blanks must be one of the following parts of speech:
 - [plural noun]
 
 The sentence should have between 3 and 5 blanks. The template should be funny, quirky, or interesting to encourage creative and humorous responses.
+
+Language: {{language}}
 
 Do not repeat any of these previously used templates: {{#if previousTemplates}}{{#each previousTemplates}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}{{else}}None{{/if}}
 

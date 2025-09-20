@@ -45,6 +45,7 @@ export type RiddleGame = {
     timer: number; // 10 minutes = 600 seconds
     winner: 'knowers' | 'impostor' | null;
     previousWords: string[];
+    language: string;
 };
 
 // Types for Wordplay
@@ -89,4 +90,5 @@ export type WordplayGame = {
   votes: Record<string, Record<string, number>>; 
   lastRoundWinner: WordplayPlayer | null;
   previousTemplates: string[];
+  language: string;
 };

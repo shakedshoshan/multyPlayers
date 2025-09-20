@@ -49,6 +49,7 @@ interface WordplayContextType {
   submitWord: (word: string) => void;
   castVote: (sentenceId: string) => void;
   nextRound: () => void;
+  setLanguage: (lang: string) => void;
 }
 
 const WordplayContext = createContext<WordplayContextType | undefined>(
@@ -206,6 +207,11 @@ export function WordplayProvider({
     [roomCode, player, router, toast]
   );
   
+  const setLanguage = useCallback(async (lang: string) => {
+    if (!game || !player?.isHost) return;
+    await update(ref(db, `wordplay/${roomCode}`), { language: lang });
+  }, [game, player, roomCode]);
+
   const parseSentenceTemplate = (template: string): Blank[] => {
     const blankRegex = /\[(.*?)]/g;
     const blanks: Blank[] = [];
@@ -237,7 +243,7 @@ export function WordplayProvider({
       const updatedPreviousTemplates = [...previousTemplates];
 
       for (const p of game.players) {
-         const { template } = await generateSentence({ previousTemplates: updatedPreviousTemplates });
+         const { template } = await generateSentence({ previousTemplates: updatedPreviousTemplates, language: game.language });
          newSentences.push({
             id: p.id,
             template,
@@ -380,7 +386,8 @@ export function WordplayProvider({
     startGame,
     submitWord,
     castVote,
-    nextRound
+    nextRound,
+    setLanguage
   };
 
   return (

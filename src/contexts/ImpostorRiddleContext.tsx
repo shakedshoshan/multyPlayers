@@ -33,6 +33,7 @@ interface ImpostorRiddleContextType {
   playAgain: () => void;
   joinGame: (name: string) => void;
   leaveGame: () => void;
+  setLanguage: (lang: string) => void;
 }
 
 const ImpostorRiddleContext = createContext<ImpostorRiddleContextType | undefined>(undefined);
@@ -167,6 +168,11 @@ export function ImpostorRiddleProvider({
     [roomCode, player, router, toast]
   );
   
+  const setLanguage = useCallback(async (lang: string) => {
+    if (!game || !player?.isHost) return;
+    await update(ref(db, `impostor-riddles/${roomCode}`), { language: lang });
+  }, [game, player, roomCode]);
+
   const startGame = useCallback(async () => {
     if (!game || !player?.isHost || game.players.length < 3) {
       toast({ title: 'Not enough players', description: 'You need at least 3 players to start.', variant: 'destructive' });
@@ -174,7 +180,7 @@ export function ImpostorRiddleProvider({
     }
 
     try {
-      const { category, secretWord } = await generateRiddle({ previousWords: game.previousWords || [] });
+      const { category, secretWord } = await generateRiddle({ previousWords: game.previousWords || [], language: game.language });
       const players = [...game.players];
       const impostorIndex = Math.floor(Math.random() * players.length);
       
@@ -281,7 +287,7 @@ export function ImpostorRiddleProvider({
   }, [game, player, roomCode]);
 
 
-  const value = { game, player, startGame, castVote, playAgain, joinGame, leaveGame };
+  const value = { game, player, startGame, castVote, playAgain, joinGame, leaveGame, setLanguage };
 
   return <ImpostorRiddleContext.Provider value={value}>{children}</ImpostorRiddleContext.Provider>;
 }

@@ -26,6 +26,7 @@ export async function createRoomAction(): Promise<string> {
     votes: {},
     winner: null,
     previousWords: [],
+    language: 'en',
   };
 
   const gameRef = ref(db, `impostor-riddles/${roomCode}`);

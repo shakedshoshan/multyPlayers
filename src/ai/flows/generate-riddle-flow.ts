@@ -15,6 +15,7 @@ const GenerateRiddleInputSchema = z.object({
   previousWords: z
     .array(z.string())
     .describe('An array of previously used secret words to avoid repetition.'),
+  language: z.string().describe('The language for the category. Should be a two-letter ISO 639-1 code.'),
 });
 export type GenerateRiddleInput = z.infer<typeof GenerateRiddleInputSchema>;
 
@@ -36,13 +37,15 @@ const prompt = ai.definePrompt({
   name: 'riddleGenerationPrompt',
   input: {schema: GenerateRiddleInputSchema},
   output: {schema: GenerateRiddleOutputSchema},
-  prompt: `You are a game master for a social deduction game. Your task is to generate a secret word and a corresponding category that acts as a hint.
+  prompt: `You are a game master for a social deduction game. Your task is to generate a secret word and a corresponding category that acts as a hint, in the specified language.
 
 Here are the rules:
 1.  The CATEGORY must be a broad topic (e.g., "Musical Instruments", "A type of fruit", "Something in a kitchen").
 2.  The SECRET WORD must be a common, well-known item that fits within that category (e.g., for "Musical Instruments", the secret word could be "Guitar" or "Piano").
 3.  Do NOT repeat any of the previously used words.
+4. The CATEGORY and SECRET WORD must be in the specified language.
 
+Language: {{language}}
 Previously used words: {{#if previousWords}}{{#each previousWords}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}{{else}}None{{/if}}
 
 Please generate a new, unique category and secret word based on these rules.
