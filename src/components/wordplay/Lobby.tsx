@@ -24,7 +24,7 @@ import {
 import { Label } from '../ui/label';
 
 export function Lobby() {
-  const { game, player, startGame, leaveGame, setLanguage } = useWordplay();
+  const { game, player, startGame, leaveGame, setLanguage, setTotalRounds } = useWordplay();
   const { toast } = useToast();
   const [isStarting, setIsStarting] = useState(false);
 
@@ -48,6 +48,12 @@ export function Lobby() {
       setLanguage(lang);
     }
   };
+  
+  const handleRoundsChange = (rounds: string) => {
+    if (player.isHost) {
+      setTotalRounds(parseInt(rounds, 10));
+    }
+  }
 
   const canStart = player.isHost && game.players.length >= 2;
 
@@ -70,12 +76,12 @@ export function Lobby() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid md:grid-cols-2 gap-4 items-start">
+        <div className="grid md:grid-cols-2 gap-8 items-start">
           <div>
             <div className="flex items-center gap-2 text-muted-foreground mb-4">
               <Users className="h-5 w-5" />
               <h3 className="text-lg font-semibold">
-                {game.players.length} / 8 Players
+                {game.players.length} / 15 Players
               </h3>
             </div>
             <div className="grid grid-cols-2 gap-4 min-h-[10rem]">
@@ -112,6 +118,28 @@ export function Lobby() {
               {!player.isHost && (
                 <p className="text-xs text-muted-foreground">
                   Only the host can change the language.
+                </p>
+              )}
+            </div>
+            <div className="grid gap-2 text-left">
+              <Label htmlFor="rounds-select">Rounds</Label>
+              <Select
+                value={String(game.totalRounds)}
+                onValueChange={handleRoundsChange}
+                disabled={!player.isHost}
+              >
+                <SelectTrigger id="rounds-select" className="w-full">
+                  <SelectValue placeholder="Select number of rounds" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 10 }, (_, i) => i + 3).map(num => (
+                    <SelectItem key={num} value={String(num)}>{num} Rounds</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+               {!player.isHost && (
+                <p className="text-xs text-muted-foreground">
+                  Only the host can set the number of rounds.
                 </p>
               )}
             </div>

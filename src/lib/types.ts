@@ -56,7 +56,7 @@ export type WordplayPlayer = {
   score: number;
 };
 
-export type WordplayGameState = 'lobby' | 'writing' | 'voting' | 'results';
+export type WordplayGameState = 'lobby' | 'writing' | 'voting' | 'results' | 'gameOver';
 
 export type BlankType = 'adjective' | 'noun' | 'verb' | 'adverb' | 'plural noun';
 
@@ -80,6 +80,7 @@ export type WordplayGame = {
   gameState: WordplayGameState;
   sentences: Sentence[];
   currentRound: number;
+  totalRounds: number;
   // Player ID of whose turn it is to fill a blank
   currentTurnPlayerId: string | null; 
   // Index of the sentence being filled

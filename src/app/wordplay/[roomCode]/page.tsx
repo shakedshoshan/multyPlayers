@@ -8,6 +8,7 @@ import { Lobby } from '@/components/wordplay/Lobby';
 import { WritingScreen } from '@/components/wordplay/WritingScreen';
 import { VotingScreen } from '@/components/wordplay/VotingScreen';
 import { ResultsScreen } from '@/components/wordplay/ResultsScreen';
+import { GameOverScreen } from '@/components/wordplay/GameOverScreen';
 
 function WordplayView() {
   const { game, player } = useWordplay();
@@ -36,6 +37,8 @@ function WordplayView() {
         return <VotingScreen />;
       case 'results':
         return <ResultsScreen />;
+      case 'gameOver':
+        return <GameOverScreen />;
       default:
         return <Lobby />;
     }

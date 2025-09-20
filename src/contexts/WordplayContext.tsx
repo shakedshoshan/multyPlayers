@@ -50,6 +50,7 @@ interface WordplayContextType {
   castVote: (sentenceId: string) => void;
   nextRound: () => void;
   setLanguage: (lang: string) => void;
+  setTotalRounds: (rounds: number) => void;
 }
 
 const WordplayContext = createContext<WordplayContextType | undefined>(
@@ -165,7 +166,7 @@ export function WordplayProvider({
           ? Object.values(snapshot.val().players)
           : [];
 
-        if (currentPlayers.length >= 8) {
+        if (currentPlayers.length >= 15) {
           toast({ title: 'Room is full', variant: 'destructive' });
           return;
         }
@@ -212,6 +213,11 @@ export function WordplayProvider({
     await update(ref(db, `wordplay/${roomCode}`), { language: lang });
   }, [game, player, roomCode]);
 
+  const setTotalRounds = useCallback(async (rounds: number) => {
+    if (!game || !player?.isHost) return;
+    await update(ref(db, `wordplay/${roomCode}`), { totalRounds: rounds });
+  }, [game, player, roomCode]);
+
   const parseSentenceTemplate = (template: string): Blank[] => {
     const blankRegex = /\[(.*?)]/g;
     const blanks: Blank[] = [];
@@ -227,23 +233,14 @@ export function WordplayProvider({
   };
 
 
-  const startGame = useCallback(async () => {
-    if (!game || !player?.isHost || game.players.length < 2) {
-      toast({
-        title: 'Not enough players',
-        description: 'You need at least 2 players to start.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
+  const startNewRound = useCallback(async (currentGame: WordplayGame) => {
     try {
       const newSentences: Sentence[] = [];
-      const previousTemplates = game.previousTemplates || [];
+      const previousTemplates = currentGame.previousTemplates || [];
       const updatedPreviousTemplates = [...previousTemplates];
 
-      for (const p of game.players) {
-         const { template } = await generateSentence({ previousTemplates: updatedPreviousTemplates, language: game.language });
+      for (const p of currentGame.players) {
+         const { template } = await generateSentence({ previousTemplates: updatedPreviousTemplates, language: currentGame.language });
          newSentences.push({
             id: p.id,
             template,
@@ -256,24 +253,37 @@ export function WordplayProvider({
 
       await update(ref(db, `wordplay/${roomCode}`), {
         gameState: 'writing',
-        currentRound: 1,
+        currentRound: currentGame.currentRound + 1,
         sentences: newSentences.reduce((acc, s, i) => ({ ...acc, [i]: s }), {}),
-        currentTurnPlayerId: game.players[0].id,
+        currentTurnPlayerId: currentGame.players[0].id,
         currentSentenceIndex: 0,
         currentBlankIndex: 0,
         votes: {},
         lastRoundWinner: null,
         previousTemplates: updatedPreviousTemplates,
       });
+
     } catch (error) {
-      console.error('Failed to start game:', error);
+       console.error('Failed to start new round:', error);
       toast({
-        title: 'Failed to start game',
-        description: 'Could not generate sentences.',
+        title: 'Failed to start round',
+        description: 'Could not generate new sentences.',
         variant: 'destructive',
       });
     }
-  }, [game, player, roomCode, toast]);
+  }, [roomCode, toast])
+
+  const startGame = useCallback(async () => {
+    if (!game || !player?.isHost || game.players.length < 2) {
+      toast({
+        title: 'Not enough players',
+        description: 'You need at least 2 players to start.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    await startNewRound(game);
+  }, [game, player, startNewRound, toast]);
   
   const submitWord = async (word: string) => {
     if (
@@ -336,9 +346,11 @@ export function WordplayProvider({
   
   const nextRound = async () => {
     if (!game || !player?.isHost) return;
-    // This will be similar to startGame, but for subsequent rounds
-    // For now, let's reset to lobby
-    await update(ref(db, `wordplay/${roomCode}`), { gameState: 'lobby' });
+    if (game.currentRound >= game.totalRounds) {
+        await update(ref(db, `wordplay/${roomCode}`), { gameState: 'gameOver' });
+    } else {
+        await startNewRound(game);
+    }
   };
   
   // Game state transitions (host only)
@@ -387,7 +399,8 @@ export function WordplayProvider({
     submitWord,
     castVote,
     nextRound,
-    setLanguage
+    setLanguage,
+    setTotalRounds
   };
 
   return (

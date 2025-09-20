@@ -2,7 +2,7 @@
 
 import { useWordplay } from '@/contexts/WordplayContext';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Loader2, ArrowLeft, Trophy } from 'lucide-react';
 import { PlayerAvatar } from '../game/PlayerAvatar';
 
@@ -14,6 +14,7 @@ export function ResultsScreen() {
   }
 
   const winner = game.lastRoundWinner;
+  const isGameOver = game.currentRound >= game.totalRounds;
 
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col gap-6 items-center text-center animate-in fade-in-0">
@@ -39,7 +40,7 @@ export function ResultsScreen() {
       <div className='flex items-center gap-4 mt-8'>
         {player.isHost && (
             <Button onClick={nextRound} size="lg">
-              Next Round
+              {isGameOver ? 'View Final Results' : 'Next Round'}
             </Button>
         )}
          <Button variant="ghost" onClick={leaveGame}>
