@@ -237,7 +237,10 @@ export function EliasProvider({
             currentPairIndex: nextPairIndex,
             currentPairId: nextPair.id,
             previousWords: [...game.previousWords, ...words],
-            [`lastTurnByPair/${nextPair.id}`]: clueGiverId,
+            lastTurnByPair: {
+              ...game.lastTurnByPair,
+              [nextPair.id]: clueGiverId,
+            },
             [`pairs/${nextPair.id}/clueGiverId`]: clueGiverId,
             [`pairs/${nextPair.id}/guesserId`]: clueGiverId === nextPair.player1Id ? nextPair.player2Id : nextPair.player1Id
         });
@@ -257,21 +260,20 @@ export function EliasProvider({
   }, [game, player, startNextRound, toast]);
 
   const endRound = useCallback(async () => {
-    const gameRef = ref(db, `elias/${roomCode}`);
-    const snapshot = await get(gameRef);
-    if (!snapshot.exists() || snapshot.val().gameState !== 'playing') return;
-
-    const currentGame = snapshot.val();
-    const currentPairId = currentGame.currentPairId;
-    const currentPair = currentGame.pairs[currentPairId];
-    const newScore = currentPair.score + currentGame.roundSuccesses - currentGame.roundFails;
-    
-    await update(gameRef, {
+    if (!game || game.gameState !== 'playing') return;
+  
+    const currentPair = game.pairs.find(p => p.id === game.currentPairId);
+    if (!currentPair) return;
+  
+    const scoreChange = game.roundSuccesses - game.roundFails;
+    const newScore = Math.max(0, currentPair.score + scoreChange); // Score can't be negative
+  
+    await update(ref(db, `elias/${roomCode}`), {
       gameState: 'summary',
       timer: 0,
-      [`pairs/${currentPairId}/score`]: newScore < 0 ? 0 : newScore, // Score can't be negative
+      [`pairs/${currentPair.id}/score`]: newScore,
     });
-  }, [roomCode]);
+  }, [game, roomCode]);
 
   const markWord = useCallback(async (success: boolean) => {
       if (!game || !player || game.gameState !== 'playing') return;
@@ -301,21 +303,23 @@ export function EliasProvider({
   useEffect(() => {
     if (player?.isHost && game?.gameState === 'playing' && game.timer > 0) {
       const interval = setInterval(async () => {
-        const gameRef = ref(db, `elias/${roomCode}`);
-        const snapshot = await get(gameRef);
-        if (!snapshot.exists() || snapshot.val().gameState !== 'playing') {
-            clearInterval(interval);
-            return;
-        }
-        const currentTimer = snapshot.val().timer;
-        if(currentTimer > 0) {
-            await update(gameRef, { timer: currentTimer - 1 });
+        // We need to get the latest timer value from Firebase, not from stale context
+        const timerRef = ref(db, `elias/${roomCode}/timer`);
+        const snapshot = await get(timerRef);
+        const currentTimer = snapshot.val();
+        
+        if (currentTimer > 0) {
+            await update(ref(db, `elias/${roomCode}`), { timer: currentTimer - 1 });
         } else {
             clearInterval(interval);
+            // endRound might be stale here, so we re-fetch the game state inside it
             endRound();
         }
       }, 1000);
       return () => clearInterval(interval);
+    } else if (player?.isHost && game?.gameState === 'playing' && game.timer <= 0) {
+        // This is a fallback for when the timer state is already 0
+        endRound();
     }
   }, [game?.gameState, game?.timer, player?.isHost, roomCode, endRound]);
   
