@@ -77,6 +77,7 @@ export function EliasProvider({
         pairs: data.pairs ? Object.values(data.pairs) : [],
         words: data.words || [],
         previousWords: data.previousWords || [],
+        lastTurnByPair: data.lastTurnByPair || {},
      }
   }
 
@@ -225,7 +226,9 @@ export function EliasProvider({
         // Alternate who gives clues
         const lastTurnByPair = game.lastTurnByPair || {};
         const lastTurn = lastTurnByPair[nextPair.id];
-        const clueGiverId = lastTurn === nextPair.player1Id ? nextPair.player2Id : nextPair.player1Id;
+        const clueGiverId = !lastTurn || lastTurn === nextPair.player2Id ? nextPair.player1Id : nextPair.player2Id;
+
+        const guesserId = clueGiverId === nextPair.player1Id ? nextPair.player2Id : nextPair.player1Id;
 
         await update(ref(db, `elias/${roomCode}`), {
             gameState: 'playing',
@@ -242,7 +245,7 @@ export function EliasProvider({
               [nextPair.id]: clueGiverId,
             },
             [`pairs/${nextPair.id}/clueGiverId`]: clueGiverId,
-            [`pairs/${nextPair.id}/guesserId`]: clueGiverId === nextPair.player1Id ? nextPair.player2Id : nextPair.player1Id
+            [`pairs/${nextPair.id}/guesserId`]: guesserId
         });
     } catch (error) {
         console.error("Failed to start next round:", error);
@@ -260,20 +263,20 @@ export function EliasProvider({
   }, [game, player, startNextRound, toast]);
 
   const endRound = useCallback(async () => {
-    if (!game || game.gameState !== 'playing') return;
+    if (!game || game.gameState !== 'playing' || !player?.isHost) return;
   
     const currentPair = game.pairs.find(p => p.id === game.currentPairId);
     if (!currentPair) return;
   
     const scoreChange = game.roundSuccesses - game.roundFails;
-    const newScore = Math.max(0, currentPair.score + scoreChange); // Score can't be negative
+    const newScore = Math.max(0, currentPair.score + scoreChange);
   
     await update(ref(db, `elias/${roomCode}`), {
       gameState: 'summary',
       timer: 0,
       [`pairs/${currentPair.id}/score`]: newScore,
     });
-  }, [game, roomCode]);
+  }, [game, roomCode, player?.isHost]);
 
   const markWord = useCallback(async (success: boolean) => {
       if (!game || !player || game.gameState !== 'playing') return;
@@ -290,16 +293,16 @@ export function EliasProvider({
       };
 
       if (success) {
-          updates.roundSuccesses = game.roundSuccesses + 1;
+          updates.roundSuccesses = (game.roundSuccesses || 0) + 1;
       } else {
-          updates.roundFails = game.roundFails + 1;
+          updates.roundFails = (game.roundFails || 0) + 1;
       }
       await update(ref(db, `elias/${roomCode}`), updates);
 
   }, [game, player, roomCode, endRound]);
 
 
-  // Timer effect (host only)
+  // Timer countdown logic (host only)
   useEffect(() => {
     if (player?.isHost && game?.gameState === 'playing') {
       const interval = setInterval(async () => {
@@ -308,15 +311,21 @@ export function EliasProvider({
         const currentTimer = snapshot.val();
         
         if (currentTimer > 0) {
-            await update(ref(db, `elias/${roomCode}`), { timer: currentTimer - 1 });
+            await set(timerRef, currentTimer - 1);
         } else {
             clearInterval(interval);
-            endRound();
         }
       }, 1000);
       return () => clearInterval(interval);
     }
-  }, [game?.gameState, player?.isHost, roomCode, endRound]);
+  }, [game?.gameState, player?.isHost, roomCode]);
+
+  // Round end logic when timer hits 0 (host only)
+  useEffect(() => {
+    if(player?.isHost && game?.gameState === 'playing' && game.timer <= 0) {
+        endRound();
+    }
+  }, [game?.gameState, game?.timer, player?.isHost, endRound])
   
 
   const value = {
@@ -347,5 +356,3 @@ export const useElias = () => {
   }
   return context;
 };
-
-    
