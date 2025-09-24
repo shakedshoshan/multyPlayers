@@ -23,6 +23,7 @@ const createPlayer = (id: string, name: string, isHost = false): RiddlePlayer =>
   isHost,
   isImpostor: false,
   votedFor: null,
+  avatarUrl: `https://picsum.photos/seed/${id}/128/128`,
 });
 
 interface ImpostorRiddleContextType {

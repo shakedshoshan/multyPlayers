@@ -40,7 +40,7 @@ export function VotingScreen() {
         <CardFooter className="flex-col gap-4">
            <div className='flex items-center gap-2 text-sm text-muted-foreground'>
              <p>by</p>
-             {author && <PlayerAvatar player={{...author, score: 0, isBot: false}} size="sm" />}
+             {author && <PlayerAvatar player={author} size="sm" />}
              <p className='font-semibold'>{author?.name}</p>
            </div>
           <Button

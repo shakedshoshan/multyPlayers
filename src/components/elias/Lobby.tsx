@@ -115,7 +115,7 @@ export function Lobby() {
                       isPaired && "opacity-50"
                     )}
                   >
-                    <PlayerAvatar player={{ ...p, isBot: false, score: 0 }} />
+                    <PlayerAvatar player={p} />
                     <span className="font-medium truncate">{p.name}</span>
                   </button>
                 )
@@ -148,12 +148,13 @@ export function Lobby() {
                 {game.pairs.map(pair => {
                     const p1 = game.players.find(p => p.id === pair.player1Id);
                     const p2 = game.players.find(p => p.id === pair.player2Id);
+                    if (!p1 || !p2) return null;
                     return (
                         <div key={pair.id} className="flex items-center justify-between p-2 border rounded-md bg-muted/50">
                             <div className='flex items-center gap-2'>
-                                <PlayerAvatar player={{ name: p1?.name || '?', isHost: false, id: p1?.id || '', score: 0, isBot: false }} size='sm' />
+                                <PlayerAvatar player={p1} size='sm' />
                                 <Link2 className='h-4 w-4 text-muted-foreground' />
-                                <PlayerAvatar player={{ name: p2?.name || '?', isHost: false, id: p2?.id || '', score: 0, isBot: false }} size='sm' />
+                                <PlayerAvatar player={p2} size='sm' />
                                 <p className='font-semibold'>{p1?.name} & {p2?.name}</p>
                             </div>
                             {player.isHost && (

@@ -50,7 +50,7 @@ export function RevealScreen() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {game.players.map((p: RiddlePlayer) => (
             <Card key={p.id} className="p-4 flex flex-col items-center">
-              <PlayerAvatar player={{...p, isBot: false, score: 0}} />
+              <PlayerAvatar player={p} />
               <p className="font-bold mt-2">{p.name}</p>
               <p className='text-muted-foreground text-sm'>Voted for:</p>
               <p className='font-semibold'>{getVoteTargetName(p.votedFor)}</p>

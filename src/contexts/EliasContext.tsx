@@ -38,6 +38,7 @@ const createPlayer = (
   id,
   name,
   isHost,
+  avatarUrl: `https://picsum.photos/seed/${id}/128/128`,
 });
 
 interface EliasContextType {
@@ -259,7 +260,8 @@ export function EliasProvider({
         return;
       }
   
-      const lastTurn = (game.lastTurnByPair || {})[nextPair.id];
+      const lastTurnByPair = game.lastTurnByPair || {};
+      const lastTurn = lastTurnByPair[nextPair.id];
       const clueGiverId = !lastTurn || lastTurn === nextPair.player2Id ? nextPair.player1Id : nextPair.player2Id;
       const guesserId = clueGiverId === nextPair.player1Id ? nextPair.player2Id : nextPair.player1Id;
   

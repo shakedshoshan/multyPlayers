@@ -68,7 +68,7 @@ export function DiscussionScreen() {
                         isVotedPlayer && "ring-4 ring-primary shadow-lg scale-105",
                         playerHasVoted && !isVotedPlayer && "opacity-60"
                       )}>
-                        <PlayerAvatar player={{...p, isBot: false, score: 0}} />
+                        <PlayerAvatar player={p} />
                         <p className="font-bold mt-2 truncate">{p.name}</p>
                         <div className="h-10 mt-2 flex items-center">
                            {player.id !== p.id && (

@@ -1,11 +1,11 @@
 'use client';
-import type { Player } from '@/lib/types';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import type { Player, RiddlePlayer, WordplayPlayer, EliasPlayer } from '@/lib/types';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Crown, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface PlayerAvatarProps {
-  player: Player;
+  player: Player | RiddlePlayer | WordplayPlayer | EliasPlayer;
   size?: 'sm' | 'md' | 'lg';
 }
 
@@ -17,6 +17,8 @@ export function PlayerAvatar({ player, size = 'md' }: PlayerAvatarProps) {
       .join('')
       .toUpperCase();
   };
+  
+  const isPlayerType = (p: any): p is Player => 'isBot' in p;
 
   return (
     <div className="relative">
@@ -27,14 +29,15 @@ export function PlayerAvatar({ player, size = 'md' }: PlayerAvatarProps) {
           size === 'lg' && 'h-24 w-24'
         )}
       >
+        <AvatarImage src={player.avatarUrl} alt={player.name} />
         <AvatarFallback
           className={cn(
             'text-xl font-bold',
             size === 'lg' && 'text-3xl',
-            player.isBot && 'bg-muted-foreground/20'
+            isPlayerType(player) && player.isBot && 'bg-muted-foreground/20'
           )}
         >
-          {player.isBot ? (
+          {isPlayerType(player) && player.isBot ? (
             <Bot className="h-2/3 w-2/3" />
           ) : (
             getInitials(player.name)

@@ -9,7 +9,7 @@ import { PlayerAvatar } from '../game/PlayerAvatar';
 export function ResultsScreen() {
   const { game, player, nextRound, leaveGame } = useWordplay();
 
-  if (!game || !player || !game.lastRoundWinner) {
+  if (!game || !game.lastRoundWinner) {
     return <Loader2 className="animate-spin" />;
   }
 
@@ -29,7 +29,7 @@ export function ResultsScreen() {
       <div className="w-full mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
         {game.players.map(p => (
             <Card key={p.id} className="p-4 flex flex-col items-center">
-                 <PlayerAvatar player={{...p, isBot: false}} />
+                 <PlayerAvatar player={p} />
                  <p className="font-bold mt-2">{p.name}</p>
                  <p className="font-mono text-xl">{p.score}</p>
                  <p className="text-sm text-muted-foreground">Points</p>

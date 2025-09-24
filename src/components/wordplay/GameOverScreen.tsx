@@ -37,7 +37,7 @@ export function GameOverScreen() {
             {index === 0 && (
               <Trophy className="absolute -top-3 -right-3 h-8 w-8 text-yellow-400" />
             )}
-            <PlayerAvatar player={{ ...p, isBot: false }} />
+            <PlayerAvatar player={p} />
             <p className="font-bold mt-2">{p.name}</p>
             <p className="font-mono text-2xl font-bold">{p.score}</p>
             <p className="text-sm text-muted-foreground">Points</p>

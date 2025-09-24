@@ -39,6 +39,7 @@ const createPlayer = (
   name,
   isHost,
   score: 0,
+  avatarUrl: `https://picsum.photos/seed/${id}/128/128`,
 });
 
 interface WordplayContextType {

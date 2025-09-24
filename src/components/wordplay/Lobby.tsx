@@ -90,7 +90,7 @@ export function Lobby() {
                   key={p.id}
                   className="flex flex-col items-center gap-2 p-4 bg-background rounded-lg border"
                 >
-                  <PlayerAvatar player={{ ...p, isBot: false, score: 0 }} />
+                  <PlayerAvatar player={p} />
                   <span className="font-medium truncate">{p.name}</span>
                 </div>
               ))}

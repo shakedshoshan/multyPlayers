@@ -4,6 +4,7 @@ export type Player = {
   isHost: boolean;
   score: number;
   isBot: boolean;
+  avatarUrl: string;
 };
 
 export type GameState = 'lobby' | 'playing' | 'revealing' | 'results';
@@ -27,25 +28,26 @@ export type Game = {
 
 // Types for The Impostor's Riddle
 export type RiddlePlayer = {
-    id: string;
-    name: string;
-    isHost: boolean;
-    isImpostor: boolean;
-    votedFor: string | null; // Player ID they voted for
+  id: string;
+  name: string;
+  isHost: boolean;
+  isImpostor: boolean;
+  votedFor: string | null; // Player ID they voted for
+  avatarUrl: string;
 };
 
 export type RiddleGameState = 'lobby' | 'voting' | 'reveal';
 
 export type RiddleGame = {
-    roomCode: string;
-    players: RiddlePlayer[];
-    gameState: RiddleGameState;
-    category: string;
-    secretWord: string;
-    timer: number; // 10 minutes = 600 seconds
-    winner: 'knowers' | 'impostor' | null;
-    previousWords: string[];
-    language: string;
+  roomCode: string;
+  players: RiddlePlayer[];
+  gameState: RiddleGameState;
+  category: string;
+  secretWord: string;
+  timer: number; // 10 minutes = 600 seconds
+  winner: 'knowers' | 'impostor' | null;
+  previousWords: string[];
+  language: string;
 };
 
 // Types for Wordplay
@@ -54,9 +56,15 @@ export type WordplayPlayer = {
   name: string;
   isHost: boolean;
   score: number;
+  avatarUrl: string;
 };
 
-export type WordplayGameState = 'lobby' | 'writing' | 'voting' | 'results' | 'gameOver';
+export type WordplayGameState =
+  | 'lobby'
+  | 'writing'
+  | 'voting'
+  | 'results'
+  | 'gameOver';
 
 export type BlankType = 'blank';
 
@@ -83,7 +91,7 @@ export type WordplayGame = {
   totalRounds: number;
   timer: number;
   // Record<voterId, sentenceId>
-  votes: Record<string, string>; 
+  votes: Record<string, string>;
   lastRoundWinner: WordplayPlayer | null;
   previousTemplates: string[];
   language: string;
@@ -94,6 +102,7 @@ export type EliasPlayer = {
   id: string;
   name: string;
   isHost: boolean;
+  avatarUrl: string;
 };
 
 export type Pair = {
