@@ -24,7 +24,7 @@ const createPlayer = (id: string, name: string, isHost = false): Player => ({
   isHost,
   score: 0,
   isBot: false,
-  avatarUrl: `https://picsum.photos/seed/${id}/128/128`,
+  avatarUrl: `https://api.dicebear.com/8.x/micah/svg?seed=${id}`,
 });
 
 interface GameContextType {
@@ -374,5 +374,6 @@ export const useGame = () => {
     
 
     
+
 
 

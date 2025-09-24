@@ -38,7 +38,7 @@ const createPlayer = (
   id,
   name,
   isHost,
-  avatarUrl: `https://picsum.photos/seed/${id}/128/128`,
+  avatarUrl: `https://api.dicebear.com/8.x/micah/svg?seed=${id}`,
 });
 
 interface EliasContextType {
@@ -241,7 +241,7 @@ export function EliasProvider({
     if (!game || !player?.isHost) return;
   
     try {
-      const languageWords = wordBank[game.language] || wordBank['en'];
+      const languageWords = wordBank[game.language as keyof typeof wordBank] || wordBank['en'];
       const availableWords = languageWords.filter(w => !(game.previousWords || []).includes(w));
       const newWords = [];
       for (let i = 0; i < WORDS_PER_ROUND; i++) {
