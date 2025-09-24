@@ -301,9 +301,8 @@ export function EliasProvider({
 
   // Timer effect (host only)
   useEffect(() => {
-    if (player?.isHost && game?.gameState === 'playing' && game.timer > 0) {
+    if (player?.isHost && game?.gameState === 'playing') {
       const interval = setInterval(async () => {
-        // We need to get the latest timer value from Firebase, not from stale context
         const timerRef = ref(db, `elias/${roomCode}/timer`);
         const snapshot = await get(timerRef);
         const currentTimer = snapshot.val();
@@ -312,16 +311,12 @@ export function EliasProvider({
             await update(ref(db, `elias/${roomCode}`), { timer: currentTimer - 1 });
         } else {
             clearInterval(interval);
-            // endRound might be stale here, so we re-fetch the game state inside it
             endRound();
         }
       }, 1000);
       return () => clearInterval(interval);
-    } else if (player?.isHost && game?.gameState === 'playing' && game.timer <= 0) {
-        // This is a fallback for when the timer state is already 0
-        endRound();
     }
-  }, [game?.gameState, game?.timer, player?.isHost, roomCode, endRound]);
+  }, [game?.gameState, player?.isHost, roomCode, endRound]);
   
 
   const value = {
