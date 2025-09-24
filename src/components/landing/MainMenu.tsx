@@ -29,6 +29,12 @@ const games = [
     href: '/wordplay',
     icon: '✏️',
   },
+  {
+    title: 'Elias',
+    description: 'A fast-paced word guessing game where you give clues to your partner.',
+    href: '/elias',
+    icon: '🗣️',
+  }
 ];
 
 export function MainMenu() {

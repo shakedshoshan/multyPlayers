@@ -88,3 +88,39 @@ export type WordplayGame = {
   previousTemplates: string[];
   language: string;
 };
+
+// Types for Elias
+export type EliasPlayer = {
+  id: string;
+  name: string;
+  isHost: boolean;
+};
+
+export type Pair = {
+  id: string;
+  player1Id: string;
+  player2Id: string;
+  score: number;
+  clueGiverId?: string; // transient, for the current round
+  guesserId?: string; // transient, for the current round
+};
+
+export type EliasGameState = 'lobby' | 'playing' | 'summary' | 'gameOver';
+
+export type EliasGame = {
+  roomCode: string;
+  players: EliasPlayer[];
+  pairs: Pair[];
+  gameState: EliasGameState;
+  language: string;
+  targetScore: number;
+  timer: number;
+  words: string[];
+  previousWords: string[];
+  currentWordIndex: number;
+  roundSuccesses: number;
+  roundFails: number;
+  currentPairIndex: number;
+  currentPairId: string;
+  lastTurnByPair: Record<string, string>; // Maps pairId to the last clueGiverId
+};
