@@ -38,7 +38,7 @@ const createPlayer = (
   id,
   name,
   isHost,
-  avatarUrl: `https://api.dicebear.com/8.x/micah/svg?seed=${id}`,
+  avatarUrl: `https://api.dicebear.com/8.x/fun-emoji/svg?seed=${id}`,
 });
 
 interface EliasContextType {
@@ -368,20 +368,19 @@ export function EliasProvider({
 
   // Timer countdown logic (host only)
   useEffect(() => {
+    let interval: NodeJS.Timeout;
     if (player?.isHost && game?.gameState === 'playing') {
-      const interval = setInterval(async () => {
+      interval = setInterval(async () => {
         const timerRef = ref(db, `elias/${roomCode}/timer`);
         const snapshot = await get(timerRef);
         const currentTimer = snapshot.val();
         
         if (currentTimer > 0) {
             await set(timerRef, currentTimer - 1);
-        } else {
-            clearInterval(interval);
         }
       }, 1000);
-      return () => clearInterval(interval);
     }
+    return () => clearInterval(interval);
   }, [game?.gameState, player?.isHost, roomCode]);
 
   // Round end logic when timer hits 0 (host only)

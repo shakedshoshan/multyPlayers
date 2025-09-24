@@ -24,7 +24,7 @@ const createPlayer = (id: string, name: string, isHost = false): Player => ({
   isHost,
   score: 0,
   isBot: false,
-  avatarUrl: `https://api.dicebear.com/8.x/micah/svg?seed=${id}`,
+  avatarUrl: `https://api.dicebear.com/8.x/fun-emoji/svg?seed=${id}`,
 });
 
 interface GameContextType {
@@ -374,6 +374,7 @@ export const useGame = () => {
     
 
     
+
 
 
 

@@ -39,7 +39,7 @@ const createPlayer = (
   name,
   isHost,
   score: 0,
-  avatarUrl: `https://api.dicebear.com/8.x/micah/svg?seed=${id}`,
+  avatarUrl: `https://api.dicebear.com/8.x/fun-emoji/svg?seed=${id}`,
 });
 
 interface WordplayContextType {

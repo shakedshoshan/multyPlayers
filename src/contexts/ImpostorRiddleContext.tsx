@@ -23,7 +23,7 @@ const createPlayer = (id: string, name: string, isHost = false): RiddlePlayer =>
   isHost,
   isImpostor: false,
   votedFor: null,
-  avatarUrl: `https://api.dicebear.com/8.x/micah/svg?seed=${id}`,
+  avatarUrl: `https://api.dicebear.com/8.x/fun-emoji/svg?seed=${id}`,
 });
 
 interface ImpostorRiddleContextType {
