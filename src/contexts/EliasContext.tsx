@@ -240,7 +240,8 @@ export function EliasProvider({
     if (!game || !player?.isHost) return;
   
     try {
-      const availableWords = wordBank.filter(w => !(game.previousWords || []).includes(w));
+      const languageWords = wordBank[game.language] || wordBank['en'];
+      const availableWords = languageWords.filter(w => !(game.previousWords || []).includes(w));
       const newWords = [];
       for (let i = 0; i < WORDS_PER_ROUND; i++) {
         if (availableWords.length === 0) break;
@@ -308,19 +309,25 @@ export function EliasProvider({
       const currentPair = game.pairs.find(p => p.id === game.currentPairId);
       if (player.id !== currentPair?.clueGiverId) return;
 
-      if (game.currentWordIndex >= game.words.length - 1) {
-          endRound(game);
+      const gameRef = ref(db, `elias/${roomCode}`);
+      const snapshot = await get(gameRef);
+      if (!snapshot.exists()) return;
+      const currentGame: EliasGame = parseFirebaseState(snapshot.val());
+
+
+      if (currentGame.currentWordIndex >= currentGame.words.length - 1) {
+          endRound(currentGame);
           return;
       }
 
       const updates: any = {
-          currentWordIndex: game.currentWordIndex + 1,
+          currentWordIndex: currentGame.currentWordIndex + 1,
       };
 
       if (success) {
-          updates.roundSuccesses = (game.roundSuccesses || 0) + 1;
+          updates.roundSuccesses = (currentGame.roundSuccesses || 0) + 1;
       } else {
-          updates.roundFails = (game.roundFails || 0) + 1;
+          updates.roundFails = (currentGame.roundFails || 0) + 1;
       }
       await update(ref(db, `elias/${roomCode}`), updates);
 
@@ -378,9 +385,17 @@ export function EliasProvider({
   // Round end logic when timer hits 0 (host only)
   useEffect(() => {
     if(player?.isHost && game?.gameState === 'playing' && game.timer <= 0) {
-        endRound(game);
+      get(ref(db, `elias/${roomCode}`)).then((snapshot) => {
+        if(snapshot.exists()) {
+          const currentGame = parseFirebaseState(snapshot.val());
+          // Make sure we haven't already transitioned
+          if (currentGame.gameState === 'playing') {
+            endRound(currentGame);
+          }
+        }
+      })
     }
-  }, [game, player?.isHost, endRound])
+  }, [game?.timer, game?.gameState, player?.isHost, endRound, roomCode])
   
 
   const value = {
