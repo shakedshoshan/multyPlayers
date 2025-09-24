@@ -3,7 +3,7 @@
 import { useElias } from '@/contexts/EliasContext';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Check, X, Mic, Ear, Eye } from 'lucide-react';
+import { Loader2, Check, X, Mic, Ear } from 'lucide-react';
 import { Progress } from '../ui/progress';
 import { PlayerAvatar } from '../game/PlayerAvatar';
 import type { EliasPlayer } from '@/lib/types';
@@ -15,10 +15,9 @@ const ActivePlayerCard = ({
   role,
 }: {
   player: EliasPlayer;
-  role: 'Clue Giver' | 'Guesser' | 'Observer';
+  role: 'Clue Giver' | 'Guesser';
 }) => {
-  const RoleIcon =
-    role === 'Clue Giver' ? Mic : role === 'Guesser' ? Ear : Eye;
+  const RoleIcon = role === 'Clue Giver' ? Mic : Ear;
 
   return (
     <div className="flex flex-col items-center gap-2 rounded-lg border p-4 bg-muted/50 w-full">
@@ -46,8 +45,6 @@ export function GameScreen() {
   const guesser = game.players.find((p) => p.id === currentPair?.guesserId);
 
   const isPlayerClueGiver = player.id === clueGiver?.id;
-  const isPlayerGuesser = player.id === guesser?.id;
-  const isObserver = !isPlayerClueGiver && !isPlayerGuesser;
 
   const getScreenContent = () => {
     if (isPlayerClueGiver) {
@@ -79,10 +76,12 @@ export function GameScreen() {
         </div>
       );
     }
+    
+    // Guesser and Observer view
     return (
       <div className="flex flex-col items-center gap-4 text-center">
         <h2 className="text-2xl font-bold">
-          {isPlayerGuesser ? "It's your turn to guess!" : 'Observing Round'}
+          {player.id === guesser?.id ? "It's your turn to guess!" : 'Observing Round'}
         </h2>
         <p className="text-xl text-muted-foreground">Listen for clues!</p>
       </div>
@@ -94,25 +93,20 @@ export function GameScreen() {
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col gap-6 animate-in fade-in-0 zoom-in-95">
       <Card className="shadow-lg">
-        <CardHeader className="text-center">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
-            <div className="md:col-span-1">
-              {isObserver && <ActivePlayerCard player={player} role="Observer" />}
-            </div>
-            <div className="flex justify-center items-center md:col-span-1">
+        <CardHeader>
+           <div className="grid grid-cols-2 gap-4 items-center mb-4">
               <div className="flex flex-col items-center gap-2">
-                  <p className="text-2xl">
-                    Score:{' '}
-                    <span className="font-bold text-green-500">
-                      {game.roundSuccesses}
-                    </span>
-                  </p>
-                  <p className="text-sm text-muted-foreground">Round total</p>
+                 <p className="text-2xl">Score</p>
+                 <p className="text-5xl font-bold text-green-500">{game.roundSuccesses}</p>
+                 <p className="text-sm text-muted-foreground">Round total</p>
               </div>
-            </div>
-             <div className="md:col-span-1"></div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+               <div className="flex flex-col items-center gap-2">
+                 <p className="text-2xl">Time</p>
+                 <p className="text-5xl font-mono font-bold">{game.timer}</p>
+                 <Progress value={timerPercentage} className="h-3 w-full mt-2" />
+              </div>
+           </div>
+           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             {clueGiver && (
               <ActivePlayerCard player={clueGiver} role="Clue Giver" />
             )}
@@ -123,14 +117,6 @@ export function GameScreen() {
           {getScreenContent()}
         </CardContent>
         <CardFooter className="flex flex-col justify-center pb-6 gap-4">
-          <div className="w-full max-w-md">
-            <div className="flex items-center gap-4">
-              <Progress value={timerPercentage} className="h-3" />
-              <p className="text-3xl font-mono font-bold w-16 text-right">
-                {game.timer}
-              </p>
-            </div>
-          </div>
         </CardFooter>
       </Card>
     </div>
