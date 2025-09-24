@@ -212,46 +212,56 @@ export function EliasProvider({
 
   const startNextRound = useCallback(async () => {
     if (!game || !player?.isHost) return;
-
+  
     try {
-        const { words } = await generateWords({
-            previousWords: game.previousWords,
-            language: game.language,
-            count: WORDS_PER_ROUND,
-        });
-
-        const nextPairIndex = game.gameState === 'lobby' ? 0 : (game.currentPairIndex + 1) % game.pairs.length;
-        const nextPair = game.pairs[nextPairIndex];
-        
-        // Alternate who gives clues
-        const lastTurnByPair = game.lastTurnByPair || {};
-        const lastTurn = lastTurnByPair[nextPair.id];
-        const clueGiverId = !lastTurn || lastTurn === nextPair.player2Id ? nextPair.player1Id : nextPair.player2Id;
-
-        const guesserId = clueGiverId === nextPair.player1Id ? nextPair.player2Id : nextPair.player1Id;
-
-        await update(ref(db, `elias/${roomCode}`), {
-            gameState: 'playing',
-            timer: ROUND_TIME,
-            words,
-            currentWordIndex: 0,
-            roundSuccesses: 0,
-            roundFails: 0,
-            currentPairIndex: nextPairIndex,
-            currentPairId: nextPair.id,
-            previousWords: [...game.previousWords, ...words],
-            lastTurnByPair: {
-              ...game.lastTurnByPair,
-              [nextPair.id]: clueGiverId,
-            },
-            [`pairs/${nextPair.id}/clueGiverId`]: clueGiverId,
-            [`pairs/${nextPair.id}/guesserId`]: guesserId
-        });
+      const { words } = await generateWords({
+        previousWords: game.previousWords,
+        language: game.language,
+        count: WORDS_PER_ROUND,
+      });
+  
+      // Determine the next pair index
+      const nextPairIndex = game.gameState === 'lobby' 
+        ? 0 
+        : (game.currentPairIndex + 1) % game.pairs.length;
+  
+      const nextPair = game.pairs[nextPairIndex];
+      if (!nextPair) {
+        toast({ title: 'Error', description: 'Could not find the next pair to play.', variant: 'destructive'});
+        return;
+      }
+  
+      // Alternate who gives clues within the pair
+      const lastTurn = (game.lastTurnByPair || {})[nextPair.id];
+      const clueGiverId = !lastTurn || lastTurn === nextPair.player2Id ? nextPair.player1Id : nextPair.player2Id;
+      const guesserId = clueGiverId === nextPair.player1Id ? nextPair.player2Id : nextPair.player1Id;
+  
+      const updates = {
+        gameState: 'playing',
+        timer: ROUND_TIME,
+        words,
+        currentWordIndex: 0,
+        roundSuccesses: 0,
+        roundFails: 0,
+        currentPairIndex: nextPairIndex,
+        currentPairId: nextPair.id,
+        previousWords: [...game.previousWords, ...words],
+        lastTurnByPair: {
+          ...game.lastTurnByPair,
+          [nextPair.id]: clueGiverId,
+        },
+        [`pairs/${nextPair.id}/clueGiverId`]: clueGiverId,
+        [`pairs/${nextPair.id}/guesserId`]: guesserId
+      };
+      
+      await update(ref(db, `elias/${roomCode}`), updates);
+  
     } catch (error) {
-        console.error("Failed to start next round:", error);
-        toast({ title: 'Error starting round', variant: 'destructive' });
+      console.error("Failed to start next round:", error);
+      toast({ title: 'Error starting round', variant: 'destructive' });
     }
   }, [game, player, roomCode, toast]);
+  
 
   const startGame = useCallback(async () => {
       if (!game || !player?.isHost) return;
