@@ -18,10 +18,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Loader2, ArrowLeft, RefreshCw, ChevronUp, ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export function RoundSummaryScreen() {
-  const { game, player, startNextRound, leaveGame } = useElias();
+  const { game, player, startNextRound, leaveGame, adjustScore } = useElias();
   
   if (!game || !player) {
     return <Loader2 className="animate-spin" />;
@@ -39,7 +40,7 @@ export function RoundSummaryScreen() {
       <Card className="w-full shadow-lg">
         <CardHeader>
           <CardTitle className="text-4xl font-extrabold">Round Over!</CardTitle>
-          <CardDescription>Here are the current scores.</CardDescription>
+          <CardDescription>Here are the current scores. The host can adjust scores if needed.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -58,7 +59,21 @@ export function RoundSummaryScreen() {
                   <TableRow key={pair.id}>
                     <TableCell className="font-medium">{index + 1}</TableCell>
                     <TableCell>{p1?.name} & {p2?.name}</TableCell>
-                    <TableCell className="text-right font-mono text-lg">{pair.score}</TableCell>
+                    <TableCell className="text-right font-mono text-lg">
+                        <div className='flex items-center justify-end gap-2'>
+                           {player.isHost && (
+                             <Button size="icon" variant="ghost" className='h-7 w-7' onClick={() => adjustScore(pair.id, -1)}>
+                               <ChevronDown className='h-5 w-5' />
+                             </Button>
+                           )}
+                           <span>{pair.score}</span>
+                            {player.isHost && (
+                             <Button size="icon" variant="ghost" className='h-7 w-7' onClick={() => adjustScore(pair.id, 1)}>
+                               <ChevronUp className='h-5 w-5' />
+                             </Button>
+                           )}
+                        </div>
+                    </TableCell>
                   </TableRow>
                 )
               })}
