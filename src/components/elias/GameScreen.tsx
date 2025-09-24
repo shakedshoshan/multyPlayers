@@ -1,13 +1,38 @@
 'use client';
 
 import { useElias } from '@/contexts/EliasContext';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Check, X, Mic, Ear } from 'lucide-react';
+import { Loader2, Check, X, Mic, Ear, Eye } from 'lucide-react';
 import { Progress } from '../ui/progress';
 import { PlayerAvatar } from '../game/PlayerAvatar';
+import type { EliasPlayer } from '@/lib/types';
 
 const ROUND_TIME = 60;
+
+const ActivePlayerCard = ({
+  player,
+  role,
+}: {
+  player: EliasPlayer;
+  role: 'Clue Giver' | 'Guesser' | 'Observer';
+}) => {
+  const RoleIcon =
+    role === 'Clue Giver' ? Mic : role === 'Guesser' ? Ear : Eye;
+
+  return (
+    <div className="flex flex-col items-center gap-2 rounded-lg border p-4 bg-muted/50 w-full">
+      <div className="flex items-center gap-2 text-muted-foreground self-start">
+        <RoleIcon className="h-4 w-4" />
+        <span className="font-semibold text-sm">{role}</span>
+      </div>
+      <PlayerAvatar player={player} size="lg" />
+      <p className="text-lg font-bold text-primary truncate max-w-full">
+        {player.name}
+      </p>
+    </div>
+  );
+};
 
 export function GameScreen() {
   const { game, player, markWord } = useElias();
@@ -16,44 +41,21 @@ export function GameScreen() {
     return <Loader2 className="animate-spin" />;
   }
 
-  const currentPair = game.pairs.find(p => p.id === game.currentPairId);
-  const clueGiver = game.players.find(p => p.id === currentPair?.clueGiverId);
-  const guesser = game.players.find(p => p.id === currentPair?.guesserId);
-  const currentWord = game.words[game.currentWordIndex];
+  const currentPair = game.pairs.find((p) => p.id === game.currentPairId);
+  const clueGiver = game.players.find((p) => p.id === currentPair?.clueGiverId);
+  const guesser = game.players.find((p) => p.id === currentPair?.guesserId);
 
   const isPlayerClueGiver = player.id === clueGiver?.id;
   const isPlayerGuesser = player.id === guesser?.id;
-
-  const ActivePlayersDisplay = () => {
-    if (!clueGiver || !guesser) return null;
-    return (
-      <div className="flex items-center justify-center gap-8 md:gap-16">
-        <div className="flex flex-col items-center gap-2">
-            <div className='flex items-center gap-2 text-muted-foreground'>
-                <Mic className='h-5 w-5' />
-                <span className='font-semibold'>Clue Giver</span>
-            </div>
-            <PlayerAvatar player={clueGiver} size='lg'/>
-            <p className='text-lg font-bold text-primary'>{clueGiver.name}</p>
-        </div>
-        <div className="flex flex-col items-center gap-2">
-            <div className='flex items-center gap-2 text-muted-foreground'>
-                <Ear className='h-5 w-5' />
-                <span className='font-semibold'>Guesser</span>
-            </div>
-            <PlayerAvatar player={guesser} size='lg'/>
-            <p className='text-lg font-bold text-primary'>{guesser.name}</p>
-        </div>
-      </div>
-    );
-  };
+  const isObserver = !isPlayerClueGiver && !isPlayerGuesser;
 
   const getScreenContent = () => {
     if (isPlayerClueGiver) {
+      const currentWord = game.words[game.currentWordIndex];
       return (
-        <div className='flex flex-col items-center gap-8'>
+        <div className="flex flex-col items-center gap-8">
           <p className="text-lg text-muted-foreground">Your word is:</p>
-          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight my-4 font-headline">
+          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight my-4 font-headline text-center">
             {currentWord}
           </h1>
           <div className="flex w-full justify-center gap-4">
@@ -63,7 +65,7 @@ export function GameScreen() {
               onClick={() => markWord(false)}
               className="w-32 h-16 text-xl"
             >
-              <X className="mr-2 h-8 w-8" /> Fail
+              <X className="mr-2 h-8 w-8" /> Skip
             </Button>
             <Button
               size="lg"
@@ -71,49 +73,64 @@ export function GameScreen() {
               onClick={() => markWord(true)}
               className="w-32 h-16 text-xl bg-green-500 hover:bg-green-600"
             >
-              <Check className="mr-2 h-8 w-8" /> Pass
+              <Check className="mr-2 h-8 w-8" /> Correct
             </Button>
           </div>
         </div>
       );
     }
     return (
-      <div className='flex flex-col items-center gap-4 text-center'>
-        <p className="text-xl text-muted-foreground">
-            {isPlayerGuesser ? "It's your turn to guess!" : "Observing Round"}
-        </p>
-         <h2 className="text-2xl font-bold">
-            Listen for clues!
+      <div className="flex flex-col items-center gap-4 text-center">
+        <h2 className="text-2xl font-bold">
+          {isPlayerGuesser ? "It's your turn to guess!" : 'Observing Round'}
         </h2>
+        <p className="text-xl text-muted-foreground">Listen for clues!</p>
       </div>
     );
   };
-  
+
   const timerPercentage = (game.timer / ROUND_TIME) * 100;
 
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col gap-6 animate-in fade-in-0 zoom-in-95">
       <Card className="shadow-lg">
         <CardHeader className="text-center">
-            <div className='flex justify-center gap-8 pt-2'>
-                <p className='text-2xl'>Success: <span className='font-bold text-green-500'>{game.roundSuccesses}</span></p>
-                <p className='text-2xl'>Fails: <span className='font-bold text-destructive'>{game.roundFails}</span></p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+            <div className="md:col-span-1">
+              {isObserver && <ActivePlayerCard player={player} role="Observer" />}
             </div>
+            <div className="flex justify-center items-center md:col-span-1">
+              <div className="flex flex-col items-center gap-2">
+                  <p className="text-2xl">
+                    Score:{' '}
+                    <span className="font-bold text-green-500">
+                      {game.roundSuccesses}
+                    </span>
+                  </p>
+                  <p className="text-sm text-muted-foreground">Round total</p>
+              </div>
+            </div>
+             <div className="md:col-span-1"></div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            {clueGiver && (
+              <ActivePlayerCard player={clueGiver} role="Clue Giver" />
+            )}
+            {guesser && <ActivePlayerCard player={guesser} role="Guesser" />}
+          </div>
         </CardHeader>
-        <CardContent className="p-6 md:p-10 flex flex-col items-center justify-center gap-8 min-h-[400px]">
-          <ActivePlayersDisplay />
-          <div className='w-full border-t my-4'></div>
+        <CardContent className="p-6 md:p-10 flex flex-col items-center justify-center gap-8 min-h-[350px]">
           {getScreenContent()}
         </CardContent>
         <CardFooter className="flex flex-col justify-center pb-6 gap-4">
-            <div className="w-full max-w-md">
-                <div className="flex items-center gap-4">
-                    <Progress value={timerPercentage} className="h-3" />
-                    <p className="text-3xl font-mono font-bold w-16 text-right">
-                        {game.timer}
-                    </p>
-                </div>
+          <div className="w-full max-w-md">
+            <div className="flex items-center gap-4">
+              <Progress value={timerPercentage} className="h-3" />
+              <p className="text-3xl font-mono font-bold w-16 text-right">
+                {game.timer}
+              </p>
             </div>
+          </div>
         </CardFooter>
       </Card>
     </div>
