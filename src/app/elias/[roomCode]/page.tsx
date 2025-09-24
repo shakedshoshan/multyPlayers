@@ -7,7 +7,7 @@ import { JoinScreen } from '@/components/elias/JoinScreen';
 import { Lobby } from '@/components/elias/Lobby';
 import { GameScreen } from '@/components/elias/GameScreen';
 import { RoundSummaryScreen } from '@/components/elias/RoundSummaryScreen';
-// import { GameOverScreen } from '@/components/elias/GameOverScreen';
+import { GameOverScreen } from '@/components/elias/GameOverScreen';
 
 function EliasView() {
   const { game, player } = useElias();
@@ -34,8 +34,8 @@ function EliasView() {
         return <GameScreen />;
       case 'summary':
         return <RoundSummaryScreen />;
-      // case 'gameOver':
-      //   return <GameOverScreen />;
+      case 'gameOver':
+        return <GameOverScreen />;
       default:
         return <Lobby />;
     }
