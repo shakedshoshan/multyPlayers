@@ -223,7 +223,8 @@ export function EliasProvider({
         const nextPair = game.pairs[nextPairIndex];
         
         // Alternate who gives clues
-        const lastTurn = game.lastTurnByPair[nextPair.id];
+        const lastTurnByPair = game.lastTurnByPair || {};
+        const lastTurn = lastTurnByPair[nextPair.id];
         const clueGiverId = lastTurn === nextPair.player1Id ? nextPair.player2Id : nextPair.player1Id;
 
         await update(ref(db, `elias/${roomCode}`), {
@@ -347,3 +348,5 @@ export const useElias = () => {
   }
   return context;
 };
+
+    
