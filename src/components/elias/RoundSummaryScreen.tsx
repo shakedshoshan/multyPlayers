@@ -71,10 +71,12 @@ export function RoundSummaryScreen() {
 
         </CardContent>
         <CardFooter className="flex-col gap-4">
-            {player.isHost && (
+            {player.isHost ? (
                 <Button size="lg" onClick={startNextRound}>
                     <RefreshCw className="mr-2 h-4 w-4" /> Start Next Round
                 </Button>
+            ) : (
+                <p className='text-muted-foreground'>Waiting for host to start the next round...</p>
             )}
             <Button variant="ghost" onClick={leaveGame}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
